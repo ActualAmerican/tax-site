@@ -9,11 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
-      - run: pnpm i
-      - run: pnpm run build
-      - name: Publish artifact (provenance bundle)
-        uses: actions/upload-artifact@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: "npm" }
+      - run: npm ci || npm i
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
         with:
           name: t1-provenance
           path: |
