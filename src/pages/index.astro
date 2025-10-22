@@ -7,32 +7,16 @@ import Breakdown from '../components/Breakdown.astro';
 import Assumptions from '../components/Assumptions.astro';
 import ContextCards from '../components/ContextCards.astro';
 import pack from '../../data/packs/2025.1.0.json';
-
-// defaults (per spec)
-const defaults = {
-  filingStatus: 'single',
-  income: 60000,
-  homeowner: true,
-  homeValue: 300000,
-  miles: 12000,
-  mpg: 28,
-  spendingShare: 0.60,
-  taxableShare: 0.55,
-  cigPacksPerWeek: 0,
-  alcoholUnitsPerWeek: 0,
-  includeFederal: false,
-  ltcg: 0
-};
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self' data:;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; font-src 'self' data:;" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>T1 — State + Federal Tax Burden Map</title>
     <meta name="description" content="Interactive state tax burden estimator with optional federal layer." />
-      <meta property="og:title" content="T1 — State + Federal Tax Burden Map" />
+    <meta property="og:title" content="T1 — State + Federal Tax Burden Map" />
     <meta property="og:description" content="Interactive state & local tax burden estimator with optional federal layer." />
     <script type="application/ld+json">
     {JSON.stringify({
@@ -50,15 +34,16 @@ const defaults = {
       <section class="panel stack">
         <h1 style="margin:.2rem 0">T1 — State + Federal Tax Burden Map</h1>
         <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> • built {pack.registry.built_at}</div>
+
         <Inputs id="inputs" />
-<Assumptions pack={pack} />
+        <Assumptions pack={pack} />
       </section>
 
       <section class="stack">
-  <Map />
-  <Breakdown pack={pack} />
-  <ContextCards pack={pack} />
-</section>
+        <Map />
+        <Breakdown />
+        <ContextCards pack={pack} />
+      </section>
     </main>
   </body>
 </html>

@@ -3,6 +3,8 @@ import '../styles/tokens.css';
 import '../styles/utilities.css';
 import Breakdown from '../components/Breakdown.astro';
 import pack from '../../data/packs/2025.1.0.json';
+
+const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 ---
 
 <html lang="en">
@@ -11,12 +13,31 @@ import pack from '../../data/packs/2025.1.0.json';
     <main class="container grid-2">
       <section class="panel stack">
         <h2>Compare • Left</h2>
-        <Breakdown pack={pack} compareSlot="left" /
+        <label class="label" for="sel-left"><span>State</span></label>
+        <select id="sel-left">
+          {STATES.map(s => <option value={s} selected={s==='CA'}>{s}</option>)}
+        </select>
+        <Breakdown initialState="CA" compareSlot="left" />
       </section>
+
       <section class="panel stack">
         <h2>Compare • Right</h2>
-        <Breakdown pack={pack} compareSlot="right" />
+        <label class="label" for="sel-right"><span>State</span></label>
+        <select id="sel-right">
+          {STATES.map(s => <option value={s} selected={s==='TX'}>{s}</option>)}
+        </select>
+        <Breakdown initialState="TX" compareSlot="right" />
       </section>
     </main>
+
+    <script type="module">
+      const left = document.querySelector('#sel-left');
+      const right = document.querySelector('#sel-right');
+      left.addEventListener('change', ()=> window.dispatchEvent(new CustomEvent('t1:state-left',  { detail: left.value })));
+      right.addEventListener('change',()=> window.dispatchEvent(new CustomEvent('t1:state-right', { detail: right.value })));
+      // fire initial events so both panels compute if needed
+      window.dispatchEvent(new CustomEvent('t1:state-left',  { detail: left.value }));
+      window.dispatchEvent(new CustomEvent('t1:state-right', { detail: right.value }));
+    </script>
   </body>
 </html>
