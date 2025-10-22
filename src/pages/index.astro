@@ -50,15 +50,15 @@ const defaults = {
       <section class="panel stack">
         <h1 style="margin:.2rem 0">T1 — State + Federal Tax Burden Map</h1>
         <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> • built {pack.registry.built_at}</div>
-        <Inputs client:load id="inputs" />
-        <Assumptions pack={pack} />
+        <Inputs id="inputs" />
+<Assumptions pack={pack} />
       </section>
 
       <section class="stack">
-        <Map client:load />
-        <Breakdown client:load pack={pack} />
-        <ContextCards client:load pack={pack} />
-      </section>
+  <Map />
+  <Breakdown pack={pack} />
+  <ContextCards pack={pack} />
+</section>
     </main>
   </body>
 </html>

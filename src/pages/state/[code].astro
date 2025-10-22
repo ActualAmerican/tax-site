@@ -21,9 +21,9 @@ const s = String(code || '').toUpperCase();
   <body>
     <main class="container stack">
       <h1>Taxes in {s}, 2025</h1>
-      <Breakdown client:load pack={pack} initialState={s} />
-      <Assumptions pack={pack} />
-      <ContextCards client:load pack={pack} initialState={s} />
+      <Breakdown pack={pack} initialState={s} />
+<Assumptions pack={pack} />
+<ContextCards pack={pack} initialState={s} />
     </main>
   </body>
 </html>

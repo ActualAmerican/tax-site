@@ -11,11 +11,11 @@ import pack from '../../data/packs/2025.1.0.json';
     <main class="container grid-2">
       <section class="panel stack">
         <h2>Compare • Left</h2>
-        <Breakdown client:load pack={pack} compareSlot="left" />
+        <Breakdown pack={pack} compareSlot="left" /
       </section>
       <section class="panel stack">
         <h2>Compare • Right</h2>
-        <Breakdown client:load pack={pack} compareSlot="right" />
+        <Breakdown pack={pack} compareSlot="right" />
       </section>
     </main>
   </body>
