@@ -1,0 +1,27 @@
+name: Scheduled Pack Refresh
+on:
+  schedule:
+    - cron: "0 6 1 1 *" # annual: Jan 1 06:00 (income, property, federal)
+    - cron: "0 6 1 */3 *" # quarterly: sales, fuel
+    - cron: "0 6 1 * *" # monthly: BLS unemployment
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - run: corepack enable || true
+      - run: pnpm i
+      - name: Build pack (stub)
+        run: pnpm run pack
+      - name: Validate pack
+        run: pnpm run lint:pack
+      - name: Build site
+        run: pnpm run build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: t1-pack
+          path: data/packs/*.json

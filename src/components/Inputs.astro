@@ -1,0 +1,69 @@
+<form class="stack" aria-label="Tax inputs">
+---
+const send = (detail) => window.dispatchEvent(new CustomEvent('t1:inputs', { detail }));
+---
+
+<div class="stack">
+  <div class="label"><span>Filing status</span></div>
+  <select id="fs" on:change={(e)=>send({ filingStatus: e.currentTarget.value })}>
+    <option value="single">Single</option>
+    <option value="married">Married</option>
+  </select>
+
+  <div class="label"><span>Income ($)</span></div>
+  <input id="inc" type="number" value="60000" min="0" on:input={(e)=>send({ income:+e.currentTarget.value })} />
+
+  <div class="label"><span>Homeowner?</span></div>
+  <select id="ho" on:change={(e)=>send({ homeowner: e.currentTarget.value==='1' })}>
+    <option value="1">Yes</option>
+    <option value="0">No (renter)</option>
+  </select>
+
+  <div class="label"><span>Home value ($)</span></div>
+  <input id="hv" type="number" value="300000" min="0" on:input={(e)=>send({ homeValue:+e.currentTarget.value })} />
+
+  <div class="grid">
+    <div>
+      <div class="label"><span>Miles/year</span></div>
+      <input id="mi" type="number" value="12000" on:input={(e)=>send({ miles:+e.currentTarget.value })}/>
+    </div>
+    <div>
+      <div class="label"><span>MPG</span></div>
+      <input id="mpg" type="number" value="28" on:input={(e)=>send({ mpg:+e.currentTarget.value })}/>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="label"><span>Spending share</span><span class="badge">60%</span></div>
+      <input id="ss" type="range" min="0.2" max="0.95" step="0.01" value="0.60" on:input={(e)=>send({ spendingShare:+e.currentTarget.value })}/>
+    </div>
+    <div>
+      <div class="label"><span>Taxable share</span><span class="badge">55%</span></div>
+      <input id="ts" type="range" min="0.2" max="0.95" step="0.01" value="0.55" on:input={(e)=>send({ taxableShare:+e.currentTarget.value })}/>
+    </div>
+  </div>
+
+  <details>
+    <summary class="label">Optional excise</summary>
+    <div class="grid">
+      <div><div class="label"><span>Cig packs/week</span></div><input type="number" value="0" min="0" step="0.1" on:input={(e)=>send({ cigPacksPerWeek:+e.currentTarget.value })}/></div>
+      <div><div class="label"><span>Alcohol units/week</span></div><input type="number" value="0" min="0" step="1" on:input={(e)=>send({ alcoholUnitsPerWeek:+e.currentTarget.value })}/></div>
+    </div>
+  </details>
+
+  <details>
+    <summary class="label">Federal options</summary>
+    <div class="grid">
+      <div><div class="label"><span>Include federal?</span></div>
+        <select on:change={(e)=>send({ includeFederal: e.currentTarget.value==='1' })}>
+          <option value="0">No</option><option value="1">Yes</option>
+        </select>
+      </div>
+      <div><div class="label"><span>Long-term cap gains ($)</span></div>
+        <input type="number" value="0" min="0" step="1000" on:input={(e)=>send({ ltcg:+e.currentTarget.value })}/>
+      </div>
+    </div>
+  </details>
+</div>
+</form>

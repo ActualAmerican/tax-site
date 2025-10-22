@@ -1,0 +1,119 @@
+---
+import '../styles/print.css';
+import pack from '../../data/packs/2025.1.0.json';
+const qp = new URL(Astro.request.url).searchParams;
+const S = (k:string, d:string)=> qp.get(k) ?? d;
+const N = (k:string, d:number)=> Number(qp.get(k) ?? d);
+const state = (S('state','CA') as string).toUpperCase();
+const inputs = {
+  filingStatus: (S('fs','single') as 'single'|'married'),
+  income: N('inc', 60000),
+  homeowner: S('ho','1')==='1',
+  homeValue: N('hv', 300000),
+  miles: N('mi', 12000),
+  mpg: N('mpg', 28),
+  spendingShare: N('ss', 0.6),
+  taxableShare: N('ts', 0.55),
+  cigPacksPerWeek: N('cig', 0),
+  alcoholUnitsPerWeek: N('alc', 0),
+  includeFederal: S('fed','0')==='1',
+  ltcg: N('ltcg',0)
+};
+const fmt$ = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0});
+const fmtP = (x:number)=> (x*100).toFixed(1)+'%';
+function get(row:any, k:string, def=0){ return (row && k in row) ? row[k] : def; }
+function incState(){
+  const row = pack.income.find((r:any)=>r.state===state);
+  if(!row || !row.has_income_tax) return 0;
+  const std = row.standard_deduction ?? 0;
+  const taxable = Math.max(0, inputs.income - std);
+  if (row.flat!=null) return taxable * row.flat;
+  let tax=0, prev=0;
+  for (const b of (row.brackets||[])){
+    const cap = (b.up_to ?? taxable);
+    const slice = Math.max(0, Math.min(taxable, cap) - prev);
+    tax += slice * b.rate; prev = cap; if (prev>=taxable) break;
+  }
+  return tax;
+}
+function sales(){
+  const row = pack.sales.find((r:any)=>r.state===state);
+  const combined = get(row,'combined_rate', get(row,'state_rate',0)+get(row,'avg_local_rate',0));
+  const spend = inputs.income * inputs.spendingShare * inputs.taxableShare;
+  return spend * combined;
+}
+function property(){
+  if(!inputs.homeowner) return 0;
+  const row = pack.property.find((r:any)=>r.state===state);
+  return inputs.homeValue * get(row,'effective_rate',0);
+}
+function fuel(){
+  const row = pack.fuel.find((r:any)=>r.state===state);
+  return (inputs.miles/Math.max(1,inputs.mpg)) * get(row,'cents_per_gallon',0);
+}
+function excise(){
+  const row = pack.excise.find((r:any)=>r.state===state);
+  const c = inputs.cigPacksPerWeek * 52 * get(row,'cigarette_per_pack',0);
+  const a = inputs.alcoholUnitsPerWeek * 52 * (get(row,'alcohol_per_unit',0) || get(row,'beer_per_gal',0));
+  return c+a;
+}
+function fed(){
+  const fed = pack.federal; const fs = inputs.filingStatus;
+  const std = fed.irs.std_deduction[fs];
+  const taxable = Math.max(0, inputs.income - std);
+  let inc=0, prev=0;
+  for (const b of fed.irs.brackets[fs]){
+    const cap = b.up_to ?? taxable;
+    const slice = Math.max(0, Math.min(taxable, cap) - prev);
+    inc += slice * b.rate; prev = cap; if (prev>=taxable) break;
+  }
+  const wb=fed.ssa.wage_base;
+  const payroll = Math.min(inputs.income,wb)*0.062 + inputs.income*fed.medicare.rate +
+    Math.max(0, inputs.income - fed.medicare.surtax_threshold[fs]) * 0.009;
+  const [z,t1,t2]=fed.irs.ltcg_thresholds[fs];
+  const a=Math.max(0,inputs.ltcg||0); const b1=Math.max(0,Math.min(a,t1)); const b2=Math.max(0,Math.min(a-b1,t2-t1)); const b3=Math.max(0,a-b1-b2);
+  return { income:inc, payroll, ltcg: b1*0 + b2*0.15 + b3*0.20 };
+}
+const rowsBase = [
+  ['Income (state)', incState()],
+  ['Sales', sales()],
+  ['Property', property()],
+  ['Fuel', fuel()],
+  ['Excise', excise()]
+];
+const fedRows = inputs.includeFederal ? (()=>{ const f = fed(); return [['Federal income', f.income], ['Payroll (FICA/Medicare)', f.payroll], ...(inputs.ltcg>0?[['LTCG', f.ltcg]]:[])]; })() : [];
+const rows = [...rowsBase, ...fedRows] as [string, number][];
+const total = rows.reduce((a,[,v])=>a+v,0);
+const eff = total / Math.max(1, inputs.income);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>T1 Report — {state}</title>
+  </head>
+  <body>
+    <main style="max-width:800px;margin:0 auto;padding:24px">
+      <header style="display:flex;justify-content:space-between;align-items:baseline">
+        <h1 style="margin:0">T1 — {state} Tax Report</h1>
+        <div>Pack {pack.registry.pack_version} • {pack.registry.built_at}</div>
+      </header>
+      <hr/>
+      <h2 style="margin:.2rem 0">Inputs</h2>
+      <pre style="white-space:pre-wrap;background:#f6f8fa;border:1px solid #e5e7eb;padding:12px;border-radius:8px;font-size:12px">{JSON.stringify({state, ...inputs}, null, 2)}</pre>
+      <h2 style="margin:.2rem 0">Breakdown</h2>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr><th style="text-align:left">Category</th><th style="text-align:right">Amount</th><th style="text-align:right">%</th></tr></thead>
+        <tbody>
+          {rows.map(([k,v]) => (<tr><td>{k}</td><td style="text-align:right">{fmt$(v)}</td><td style="text-align:right">{fmtP(v/Math.max(1,inputs.income))}</td></tr>))}
+        </tbody>
+        <tfoot><tr><th style="text-align:left">Total</th><th style="text-align:right">{fmt$(total)}</th><th style="text-align:right">{fmtP(eff)}</th></tr></tfoot>
+      </table>
+      <h3>Sources (provenance)</h3>
+      <ul>
+        {pack.registry.sources.map((s:any)=>(<li>{s.metric}{s.state?` (${s.state})`:''}: {s.url} — checked {s.checked_at}</li>))}
+      </ul>
+      <p style="font-size:12px;color:#555">Transparent approximations; official instructions may differ. No PII stored.</p>
+    </main>
+  </body>
+</html>

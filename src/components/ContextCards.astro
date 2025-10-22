@@ -1,0 +1,20 @@
+---
+const { pack, initialState = 'CA' } = Astro.props;
+const state = initialState;
+const ctx = (st) => (pack.context.find(c=>c.state===st) || {});
+---
+
+<div class="grid">
+  <div class="panel">
+    <div class="label"><strong>Median Household Income</strong><span>ACS</span></div>
+    <div style="font-size:1.4rem">{ctx(state).acs_median_income ? `$${(ctx(state).acs_median_income).toLocaleString()}` : '—'}</div>
+  </div>
+  <div class="panel">
+    <div class="label"><strong>Regional Price Parity</strong><span>BEA</span></div>
+    <div style="font-size:1.4rem">{ctx(state).bea_rpp ?? '—'}</div>
+  </div>
+  <div class="panel">
+    <div class="label"><strong>Unemployment</strong><span>BLS</span></div>
+    <div style="font-size:1.4rem">{ctx(state).bls_unemp_rate ? `${ctx(state).bls_unemp_rate}%` : '—'}</div>
+  </div>
+</div>

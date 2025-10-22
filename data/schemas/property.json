@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["state", "year", "effective_rate"],
+  "properties": {
+    "state": { "type": "string", "minLength": 2, "maxLength": 2 },
+    "year": { "type": "integer" },
+    "effective_rate": { "type": "number" },
+    "method": { "type": "string" }
+  },
+  "additionalProperties": true
+}

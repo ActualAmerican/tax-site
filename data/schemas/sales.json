@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["state", "year"],
+  "properties": {
+    "state": { "type": "string", "minLength": 2, "maxLength": 2 },
+    "year": { "type": "integer" },
+    "state_rate": { "type": "number" },
+    "avg_local_rate": { "type": "number" },
+    "combined_rate": { "type": "number" }
+  },
+  "additionalProperties": true
+}

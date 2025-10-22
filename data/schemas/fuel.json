@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["state", "year", "cents_per_gallon"],
+  "properties": {
+    "state": { "type": "string", "minLength": 2, "maxLength": 2 },
+    "year": { "type": "integer" },
+    "cents_per_gallon": { "type": "number" }
+  },
+  "additionalProperties": true
+}

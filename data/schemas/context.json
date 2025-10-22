@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["state", "year"],
+  "properties": {
+    "state": { "type": "string", "minLength": 2, "maxLength": 2 },
+    "year": { "type": "integer" },
+    "acs_median_income": { "type": "number" },
+    "bea_rpp": { "type": "number" },
+    "bls_unemp_rate": { "type": "number" }
+  },
+  "additionalProperties": true
+}

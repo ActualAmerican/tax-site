@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "state",
+    "year",
+    "has_income_tax",
+    "standard_deduction",
+    "flat",
+    "brackets"
+  ],
+  "properties": {
+    "state": { "type": "string", "minLength": 2, "maxLength": 2 },
+    "year": { "type": "integer" },
+    "has_income_tax": { "type": "boolean" },
+    "standard_deduction": { "type": ["number", "null"] },
+    "flat": { "type": ["number", "null"] },
+    "brackets": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "required": ["up_to", "rate"],
+        "properties": {
+          "up_to": { "type": ["number", "null"] },
+          "rate": { "type": "number" }
+        }
+      }
+    }
+  }
+}

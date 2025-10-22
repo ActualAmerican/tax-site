@@ -1,0 +1,29 @@
+---
+import '../../styles/tokens.css';
+import '../../styles/utilities.css';
+import Breakdown from '../../components/Breakdown.astro';
+import Assumptions from '../../components/Assumptions.astro';
+import ContextCards from '../../components/ContextCards.astro';
+import pack from '../../../data/packs/2025.1.0.json';
+
+const { code } = Astro.params;
+const s = String(code || '').toUpperCase();
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Taxes in {s}, 2025 — T1</title>
+    <meta name="description" content={`Per-state tax breakdown for ${s}`} />
+      <meta property="og:title" content={`Taxes in ${s}, 2025 — T1`} />
+    <meta property="og:description" content={`Transparent estimate of ${s} state & local taxes with optional federal layer.`} />
+  </head>
+  <body>
+    <main class="container stack">
+      <h1>Taxes in {s}, 2025</h1>
+      <Breakdown client:load pack={pack} initialState={s} />
+      <Assumptions pack={pack} />
+      <ContextCards client:load pack={pack} initialState={s} />
+    </main>
+  </body>
+</html>

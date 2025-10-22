@@ -1,0 +1,22 @@
+---
+import '../styles/tokens.css';
+import '../styles/utilities.css';
+import Breakdown from '../components/Breakdown.astro';
+import pack from '../../data/packs/2025.1.0.json';
+---
+
+<html lang="en">
+  <head><meta charset="utf-8" /><title>T1 — Compare States</title></head>
+  <body>
+    <main class="container grid-2">
+      <section class="panel stack">
+        <h2>Compare • Left</h2>
+        <Breakdown client:load pack={pack} compareSlot="left" />
+      </section>
+      <section class="panel stack">
+        <h2>Compare • Right</h2>
+        <Breakdown client:load pack={pack} compareSlot="right" />
+      </section>
+    </main>
+  </body>
+</html>

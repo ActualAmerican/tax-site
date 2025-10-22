@@ -1,0 +1,22 @@
+name: Release
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - run: pnpm i
+      - run: pnpm run build
+      - name: Publish artifact (provenance bundle)
+        uses: actions/upload-artifact@v4
+        with:
+          name: t1-provenance
+          path: |
+            data/packs/*.json
+            data/schemas/*.json
+            scripts/**/*

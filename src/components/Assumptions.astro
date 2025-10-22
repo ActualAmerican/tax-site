@@ -1,0 +1,19 @@
+---
+const { pack } = Astro.props;
+---
+
+<div class="panel stack">
+  <details open>
+    <summary class="label"><strong>Assumptions & sources</strong></summary>
+    <div class="stack" style="font-size:.95rem; color:var(--muted)">
+      <div>Pack: <strong>{pack.registry.pack_version}</strong> • Built: {pack.registry.built_at}</div>
+      <div>Registry sources:</div>
+      <ul>
+        {pack.registry.sources.map((s) => (
+          <li>{s.metric}{s.state?` (${s.state})`:''}: <a href={s.url} target="_blank" rel="noreferrer">{s.url}</a> — checked {s.checked_at}</li>
+        ))}
+      </ul>
+      <p>Models: state income, sales, property, fuel, excise; optional federal income, payroll, LTCG (simplified per spec).</p>
+    </div>
+  </details>
+</div>

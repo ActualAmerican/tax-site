@@ -1,0 +1,170 @@
+---
+const { pack, initialState = 'CA', compareSlot } = Astro.props;
+---
+
+<div class="panel stack" id={`bd-${compareSlot||'solo'}`} data-state={initialState}>
+  <div class="label"><strong>Breakdown</strong><span id="bd-state">{initialState}</span></div>
+  <div id="chart" class="bar" aria-label="Stacked tax burden bar"></div>
+
+  <table id="tbl" style="width:100%;border-collapse:collapse">
+    <thead><tr><th style="text-align:left">Category</th><th style="text-align:right">Amount</th><th style="text-align:right">%</th></tr></thead>
+    <tbody></tbody>
+    <tfoot><tr><th style="text-align:left">Total</th><th id="tot" style="text-align:right"></th><th id="eff" style="text-align:right"></th></tr></tfoot>
+  </table>
+
+  <div class="label">
+    <a class="badge" id="export" href={`/report?state=${initialState}`}>Export PDF</a>
+  </div>
+</div>
+
+<script type="module">
+  import pack from '../../data/packs/2025.1.0.json';
+
+  const el = document.currentScript.parentElement;
+  const chart = el.querySelector('#chart');
+  const tbody = el.querySelector('tbody');
+  const totEl = el.querySelector('#tot');
+  const effEl = el.querySelector('#eff');
+  const stateEl = el.querySelector('#bd-state');
+  const exportEl = el.querySelector('#export');
+
+  const fmt$ = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0});
+  const fmtP = (x)=> (x*100).toFixed(1)+'%';
+
+  let s = el.getAttribute('data-state') || 'CA';
+  stateEl.textContent = s;
+
+  const inputs = {
+    filingStatus:'single', income:60000, homeowner:true, homeValue:300000,
+    miles:12000, mpg:28, spendingShare:0.60, taxableShare:0.55,
+    cigPacksPerWeek:0, alcoholUnitsPerWeek:0, includeFederal:false, ltcg:0
+  };
+
+  function get(row, k, def=0){ return (row && k in row) ? row[k] : def; }
+
+  function calcStateIncomeTax(gross){
+    const row = pack.income.find(r=>r.state===s);
+    if(!row || !row.has_income_tax) return 0;
+    const std = row.standard_deduction ?? 0;
+    const taxable = Math.max(0, gross - std);
+    if (row.flat!=null) return taxable * row.flat;
+    let tax=0, prev=0;
+    for (const b of (row.brackets||[])){
+      const cap = (b.up_to ?? taxable);
+      const slice = Math.max(0, Math.min(taxable, cap) - prev);
+      tax += slice * b.rate; prev = cap; if (prev>=taxable) break;
+    }
+    return tax;
+  }
+
+  function calcSales(){
+    const row = pack.sales.find(r=>r.state===s);
+    const combined = get(row,'combined_rate', get(row,'state_rate',0)+get(row,'avg_local_rate',0));
+    const spend = inputs.income * inputs.spendingShare * inputs.taxableShare;
+    return spend * combined;
+  }
+  function calcProperty(){
+    if(!inputs.homeowner) return 0;
+    const row = pack.property.find(r=>r.state===s);
+    return inputs.homeValue * get(row,'effective_rate',0);
+  }
+  function calcFuel(){
+    const row = pack.fuel.find(r=>r.state===s);
+    const gallons = (inputs.miles||0)/Math.max(1, inputs.mpg||1);
+    return gallons * get(row,'cents_per_gallon',0);
+  }
+  function calcExcise(){
+    const row = pack.excise.find(r=>r.state===s);
+    const c = (inputs.cigPacksPerWeek||0) * 52 * get(row,'cigarette_per_pack',0);
+    const a = (inputs.alcoholUnitsPerWeek||0) * 52 * (get(row,'alcohol_per_unit',0) || get(row,'beer_per_gal',0));
+    return c + a;
+  }
+
+  function calcFederal(){
+    const fed = pack.federal;
+    const fs = inputs.filingStatus;
+    // income
+    const std = fed.irs.std_deduction[fs];
+    const taxable = Math.max(0, inputs.income - std);
+    let inc=0, prev=0;
+    for (const b of fed.irs.brackets[fs]){
+      const cap = b.up_to ?? taxable;
+      const slice = Math.max(0, Math.min(taxable, cap) - prev);
+      inc += slice * b.rate; prev = cap; if (prev>=taxable) break;
+    }
+    // payroll
+    const wb = fed.ssa.wage_base;
+    const payroll = Math.min(inputs.income, wb)*0.062 + inputs.income*fed.medicare.rate +
+      Math.max(0, inputs.income - fed.medicare.surtax_threshold[fs]) * 0.009;
+    // ltcg
+    const [z,t1,t2] = fed.irs.ltcg_thresholds[fs];
+    const a = Math.max(0, inputs.ltcg||0);
+    const band1 = Math.max(0, Math.min(a, t1));
+    const band2 = Math.max(0, Math.min(a - band1, t2 - t1));
+    const band3 = Math.max(0, a - band1 - band2);
+    const ltcg = band1*0 + band2*0.15 + band3*0.20;
+    return { income:inc, payroll, ltcg };
+  }
+
+  function updateExportHref(){
+    const params = new URLSearchParams({
+      state: s,
+      fs: inputs.filingStatus,
+      inc: String(inputs.income),
+      ho: inputs.homeowner? '1':'0',
+      hv: String(inputs.homeValue),
+      mi: String(inputs.miles),
+      mpg: String(inputs.mpg),
+      ss: String(inputs.spendingShare),
+      ts: String(inputs.taxableShare),
+      cig: String(inputs.cigPacksPerWeek),
+      alc: String(inputs.alcoholUnitsPerWeek),
+      fed: inputs.includeFederal? '1':'0',
+      ltcg: String(inputs.ltcg||0)
+    });
+    exportEl.href = '/report?'+params.toString();
+  }
+
+  function compute() {
+    const rows = [
+      ['Income (state)', calcStateIncomeTax(inputs.income)],
+      ['Sales',          calcSales()],
+      ['Property',       calcProperty()],
+      ['Fuel',           calcFuel()],
+      ['Excise',         calcExcise()]
+    ];
+    if (inputs.includeFederal) {
+      const f = calcFederal();
+      rows.push(['Federal income', f.income]);
+      rows.push(['Payroll (FICA/Medicare)', f.payroll]);
+      if (inputs.ltcg>0) rows.push(['LTCG', f.ltcg]);
+    }
+    const total = rows.reduce((a,[,v])=>a+v,0);
+    const eff = total / Math.max(1, inputs.income);
+
+    tbody.innerHTML = '';
+    rows.forEach(([k,v])=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${k}</td><td style="text-align:right">${fmt$.format(v)}</td><td style="text-align:right">${fmtP((v)/(inputs.income||1))}</td>`;
+      tbody.appendChild(tr);
+    });
+    totEl.textContent = fmt$.format(total);
+    effEl.textContent = fmtP(eff);
+
+    chart.innerHTML = '';
+    rows.forEach(([k,v],i)=>{
+      const seg = document.createElement('section');
+      seg.title = `${k}: ${fmt$.format(v)} (${fmtP((v)/(inputs.income||1))})`;
+      seg.style.width = (v/Math.max(1,total))*100 + '%';
+      seg.style.background = ['#22c55e','#eab308','#0ea5e9','#a78bfa','#f97316','#64748b','#0891b2','#ef4444'][i%8];
+      chart.appendChild(seg);
+    });
+
+    updateExportHref();
+  }
+
+  compute();
+
+  window.addEventListener('t1:inputs', (e)=>{ Object.assign(inputs, e.detail); compute(); });
+  window.addEventListener('t1:state', (e)=>{ s = e.detail; stateEl.textContent = s; compute(); });
+</script>

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["pack_version", "built_at", "sources", "hash"],
+  "properties": {
+    "pack_version": { "type": "string" },
+    "built_at": { "type": "string" },
+    "hash": { "type": "string" },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["metric", "url", "checked_at"],
+        "properties": {
+          "metric": { "type": "string" },
+          "state": { "type": "string", "minLength": 2, "maxLength": 2 },
+          "url": { "type": "string" },
+          "checked_at": { "type": "string" }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

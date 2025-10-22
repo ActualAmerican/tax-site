@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["year", "irs", "ssa", "medicare"],
+  "properties": {
+    "year": { "type": "integer" },
+    "irs": {
+      "type": "object",
+      "required": ["std_deduction", "brackets", "ltcg_thresholds"],
+      "properties": {
+        "std_deduction": {
+          "type": "object",
+          "required": ["single", "married"],
+          "properties": {
+            "single": { "type": "number" },
+            "married": { "type": "number" }
+          }
+        },
+        "brackets": {
+          "type": "object",
+          "required": ["single", "married"],
+          "properties": {
+            "single": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["up_to", "rate"],
+                "properties": {
+                  "up_to": { "type": ["number", "null"] },
+                  "rate": { "type": "number" }
+                }
+              }
+            },
+            "married": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["up_to", "rate"],
+                "properties": {
+                  "up_to": { "type": ["number", "null"] },
+                  "rate": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "ltcg_thresholds": {
+          "type": "object",
+          "required": ["single", "married"],
+          "properties": {
+            "single": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": { "type": "number" }
+            },
+            "married": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "ssa": {
+      "type": "object",
+      "required": ["wage_base"],
+      "properties": { "wage_base": { "type": "number" } }
+    },
+    "medicare": {
+      "type": "object",
+      "required": ["rate", "surtax_threshold"],
+      "properties": {
+        "rate": { "type": "number" },
+        "surtax_threshold": {
+          "type": "object",
+          "required": ["single", "married"],
+          "properties": {
+            "single": { "type": "number" },
+            "married": { "type": "number" }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

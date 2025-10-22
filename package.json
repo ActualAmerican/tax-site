@@ -1,0 +1,17 @@
+{
+  "name": "t1-tax-map",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "lint:pack": "node scripts/validate/validate-pack.ts",
+    "pack": "node scripts/build_pack.ts",
+    "ci:smoke": "node scripts/ci_smoke.ts"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
