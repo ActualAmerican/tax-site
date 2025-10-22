@@ -7,23 +7,31 @@ import ContextCards from '../../components/ContextCards.astro';
 import pack from '../../../data/packs/2025.1.0.json';
 
 const { code } = Astro.params;
-const s = String(code || '').toUpperCase();
+const s = (code || 'CA').toUpperCase();
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>Taxes in {s}, 2025 — T1</title>
-    <meta name="description" content={`Per-state tax breakdown for ${s}`} />
-      <meta property="og:title" content={`Taxes in ${s}, 2025 — T1`} />
+    <meta name="description" content={`Transparent estimate of ${s} state & local taxes with optional federal layer.`} />
+    <meta property="og:title" content={`Taxes in ${s}, 2025 — T1`} />
     <meta property="og:description" content={`Transparent estimate of ${s} state & local taxes with optional federal layer.`} />
   </head>
   <body>
-    <main class="container stack">
-      <h1>Taxes in {s}, 2025</h1>
-      <Breakdown pack={pack} initialState={s} />
-<Assumptions pack={pack} />
-<ContextCards pack={pack} initialState={s} />
+    <main class="container grid" style="grid-template-columns: 420px 1fr; align-items:start">
+      <section class="panel stack">
+        <a href="/" class="badge" aria-label="Back to home">← Home</a>
+        <h1 style="margin:.2rem 0">Taxes in {s}, 2025</h1>
+        <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> • built {pack.registry.built_at}</div>
+
+        <Assumptions pack={pack} />
+      </section>
+
+      <section class="stack">
+        <Breakdown initialState={s} />
+        <ContextCards pack={pack} initialState={s} />
+      </section>
     </main>
   </body>
 </html>
