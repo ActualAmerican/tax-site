@@ -1,7 +1,6 @@
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
-    "moduleResolution": "bundler",
-    "types": ["node"]
+    "types": ["astro/client", "node"]
   }
 }
