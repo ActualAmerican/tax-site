@@ -1,1 +1,0 @@
-﻿Temporary snapshot for review.
