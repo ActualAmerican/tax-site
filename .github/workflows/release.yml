@@ -1,8 +1,8 @@
 name: Release
 on:
-  workflow_dispatch:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-release:
@@ -12,11 +12,11 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: "npm" }
       - run: npm ci || npm i
+      - run: npm run lint:pack
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
-          name: t1-provenance
+          name: t1-dist
           path: |
-            data/packs/*.json
-            data/schemas/*.json
-            scripts/**/*
+            dist/**
+            data/packs/2025.1.0.json
