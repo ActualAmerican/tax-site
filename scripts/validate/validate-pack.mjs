@@ -8,7 +8,7 @@ const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 
 const PACK = JSON.parse(fs.readFileSync("data/packs/2025.1.0.json", "utf8"));
-const SCHEMA = (name: string) =>
+const SCHEMA = (name) =>
   JSON.parse(fs.readFileSync(path.join("data/schemas", name), "utf8"));
 
 const schemas = {
@@ -22,13 +22,12 @@ const schemas = {
   context: ajv.compile(SCHEMA("context.json")),
 };
 
-function die(msg: string, err?: any) {
+function die(msg, err) {
   console.error("❌", msg);
   if (err) console.error(err);
   process.exit(1);
 }
 
-// Structure
 if (!PACK.registry) die("Missing registry");
 ["income", "sales", "property", "fuel", "excise", "federal", "context"].forEach(
   (s) => {
@@ -36,28 +35,19 @@ if (!PACK.registry) die("Missing registry");
   }
 );
 
-// Validate registry
 if (!schemas.registry(PACK.registry))
   die("Registry schema failed", schemas.registry.errors);
 
-// Validate arrays
-(["income", "sales", "property", "fuel", "excise", "context"] as const).forEach(
-  (key) => {
-    for (const row of PACK[key]) {
-      if (!schemas[key](row))
-        die(
-          `${key} schema failed for ${row.state || "??"}`,
-          schemas[key].errors
-        );
-    }
+["income", "sales", "property", "fuel", "excise", "context"].forEach((key) => {
+  for (const row of PACK[key]) {
+    if (!schemas[key](row))
+      die(`${key} schema failed for ${row.state || "??"}`, schemas[key].errors);
   }
-);
+});
 
-// Validate federal
 if (!schemas.federal(PACK.federal))
   die("Federal schema failed", schemas.federal.errors);
 
-// Sanity bounds
 for (const r of PACK.sales) {
   const c = r.combined_rate ?? (r.state_rate || 0) + (r.avg_local_rate || 0);
   if (c < 0 || c > 0.15) die(`Unusual sales combined_rate ${c} for ${r.state}`);

@@ -7,11 +7,23 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "lint:pack": "node scripts/validate/validate-pack.ts",
-    "pack": "node scripts/build_pack.ts",
-    "ci:smoke": "node scripts/ci_smoke.ts"
+    "lint:pack": "node scripts/validate/validate-pack.mjs",
+    "pack": "node scripts/build_pack.mjs",
+    "ci:smoke": "node scripts/ci_smoke.mjs"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "astro": "^5.14.8",
+    "d3-geo": "^3.1.1",
+    "topojson-client": "^3.1.0",
+    "typescript": "^5.9.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
   }
 }
