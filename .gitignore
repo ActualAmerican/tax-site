@@ -1,7 +1,11 @@
 ﻿node_modules/
 dist/
 .astro/
+.vscode/
 .env*
 .DS_Store
 Thumbs.db
-.vscode/
+
+# build artifacts
+*.log
+*.cache
