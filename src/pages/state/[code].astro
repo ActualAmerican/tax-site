@@ -6,6 +6,18 @@ import Assumptions from '../../components/Assumptions.astro';
 import ContextCards from '../../components/ContextCards.astro';
 import pack from '../../../data/packs/2025.1.0.json';
 
+export async function getStaticPaths() {
+  // Generate a path for each state present in any metric of the pack
+  const METRICS = ['income','sales','property','fuel','excise','context'];
+  const states = new Set();
+  for (const m of METRICS){
+    for (const r of (pack[m] || [])) if (r && r.state) states.add(String(r.state).toUpperCase());
+  }
+  // Fallback: ensure at least CA is present
+  if (states.size === 0) states.add('CA');
+  return Array.from(states).sort().map(s => ({ params: { code: s } }));
+}
+
 const { code } = Astro.params;
 const s = (code || 'CA').toUpperCase();
 ---

@@ -19,7 +19,8 @@ const inputs = {
   includeFederal: S('fed','0')==='1',
   ltcg: N('ltcg',0)
 };
-const fmt$ = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0});
+const _fmt = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0});
+const fmt$ = (x:number) => _fmt.format(x);
 const fmtP = (x:number)=> (x*100).toFixed(1)+'%';
 function get(row:any, k:string, def=0){ return (row && k in row) ? row[k] : def; }
 function incState(){
