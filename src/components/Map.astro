@@ -1,12 +1,67 @@
 ---
-/* Interactive US map (bundled module import) */
+/* T1 – US map (self-contained; no external script file needed) */
 ---
 <div class="panel" data-t1-map>
   <div class="label"><strong>US Map</strong><span>Click a state</span></div>
-  <svg width="100%" height="520" role="img" aria-label="Map of the United States"><g></g></svg>
+  <svg width="100%" height="520" role="img" aria-label="Map of the United States">
+    <g></g>
+  </svg>
 </div>
 
-<!-- Import the module so Vite bundles dependencies -->
 <script type="module">
-  import '../scripts/map.ts';
+  import { geoAlbersUsa, geoPath } from 'd3-geo';
+  import { feature, mesh } from 'topojson-client';
+
+  const root = document.querySelector('[data-t1-map]');
+  if (!root) {
+    // Not on this page — bail out.
+  } else {
+    const svg = root.querySelector('svg');
+    const g = svg.querySelector('g');
+
+    let topoCache = null;
+
+    async function loadTopo() {
+      if (topoCache) return topoCache;
+      const res = await fetch('/topo/states-10m.json');
+      topoCache = await res.json();
+      return topoCache;
+    }
+
+    async function render() {
+      const topo = await loadTopo();
+      const states = feature(topo, topo.objects.states);
+      const nation = mesh(topo, topo.objects.nation, (a, b) => a === b);
+
+      const width = root.clientWidth || 960;
+      const height = 520;
+
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+      const projection = geoAlbersUsa().fitSize([width, height], states);
+      const path = geoPath().projection(projection);
+
+      g.innerHTML = '';
+
+      for (const f of states.features) {
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        p.setAttribute('d', path(f));
+        if (f.id != null) p.setAttribute('data-fips', f.id);
+        p.setAttribute('class', 'state');
+        g.appendChild(p);
+      }
+
+      if (nation) {
+        const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        outline.setAttribute('d', path(nation));
+        outline.setAttribute('class', 'nation');
+        g.appendChild(outline);
+      }
+    }
+
+    render();
+    addEventListener('resize', render);
+  }
 </script>
+
+
