@@ -38,7 +38,36 @@ const slot = compareSlot ?? 'solo';
   </div>
 </div>
 
-<!-- Import the module so Vite bundles dependencies -->
+<!-- Small client script to listen for state change events and update this panel's UI/export link -->
 <script type="module">
-  import '../scripts/breakdown.ts';
+  (function(){
+    const root = document.currentScript?.previousElementSibling;
+    if (!root) return;
+    const slot = root.getAttribute('data-slot') || 'solo';
+    const stateLabel = root.querySelector('#bd-state');
+    const exportLink = root.querySelector('#export');
+
+    function updateState(s){
+      root.setAttribute('data-state', s);
+      if(stateLabel) stateLabel.textContent = s;
+      if(exportLink) exportLink.setAttribute('href', `/report?state=${s}`);
+    }
+
+    // generic event that set any slot
+    window.addEventListener('t1:state', (e)=>{
+      const s = e.detail; if(!s) return; if(slot === 'solo') updateState(s);
+    });
+
+    window.addEventListener('t1:state-left', (e)=>{
+      const s = e.detail; if(!s) return; if(slot === 'left') updateState(s);
+    });
+    window.addEventListener('t1:state-right', (e)=>{
+      const s = e.detail; if(!s) return; if(slot === 'right') updateState(s);
+    });
+
+    // Also listen for a direct click/update API
+    root.addEventListener('t1:set-state', (ev)=>{
+      const s = ev.detail; if(s) updateState(s);
+    });
+  })();
 </script>

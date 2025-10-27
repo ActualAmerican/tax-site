@@ -5,6 +5,9 @@ import Breakdown from '../components/Breakdown.astro';
 import pack from '../../data/packs/2025.1.0.json';
 
 const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
+const qp = new URL(Astro.request.url).searchParams;
+const leftDefault = (qp.get('a') || 'CA').toUpperCase();
+const rightDefault = (qp.get('b') || 'TX').toUpperCase();
 ---
 
 <html lang="en">
@@ -15,29 +18,44 @@ const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID"
         <h2>Compare • Left</h2>
         <label class="label" for="sel-left"><span>State</span></label>
         <select id="sel-left">
-          {STATES.map(s => <option value={s} selected={s==='CA'}>{s}</option>)}
+          {STATES.map(s => <option value={s} selected={s===leftDefault}>{s}</option>)}
         </select>
-        <Breakdown initialState="CA" compareSlot="left" />
+        <Breakdown initialState={leftDefault} compareSlot="left" />
       </section>
 
       <section class="panel stack">
         <h2>Compare • Right</h2>
         <label class="label" for="sel-right"><span>State</span></label>
         <select id="sel-right">
-          {STATES.map(s => <option value={s} selected={s==='TX'}>{s}</option>)}
+          {STATES.map(s => <option value={s} selected={s===rightDefault}>{s}</option>)}
         </select>
-        <Breakdown initialState="TX" compareSlot="right" />
+        <Breakdown initialState={rightDefault} compareSlot="right" />
       </section>
     </main>
 
     <script type="module">
       const left = document.querySelector('#sel-left');
       const right = document.querySelector('#sel-right');
-      left.addEventListener('change', ()=> window.dispatchEvent(new CustomEvent('t1:state-left',  { detail: left.value })));
-      right.addEventListener('change',()=> window.dispatchEvent(new CustomEvent('t1:state-right', { detail: right.value })));
-      // fire initial events so both panels compute if needed
+      function pushParams(a,b){
+        const u = new URL(window.location.href);
+        u.searchParams.set('a', a);
+        u.searchParams.set('b', b);
+        window.history.replaceState({}, '', u.toString());
+      }
+      left.addEventListener('change', ()=>{
+        const v = left.value;
+        window.dispatchEvent(new CustomEvent('t1:state-left',  { detail: v }));
+        pushParams(v, right.value);
+      });
+      right.addEventListener('change',()=>{
+        const v = right.value;
+        window.dispatchEvent(new CustomEvent('t1:state-right', { detail: v }));
+        pushParams(left.value, v);
+      });
+      // fire initial events so both panels compute if needed and sync URL
       window.dispatchEvent(new CustomEvent('t1:state-left',  { detail: left.value }));
       window.dispatchEvent(new CustomEvent('t1:state-right', { detail: right.value }));
+      pushParams(left.value, right.value);
     </script>
   </body>
 </html>
