@@ -3,42 +3,42 @@
 ---
 <form class="stack" aria-label="Tax inputs">
   <div class="label"><span>Filing status</span></div>
-  <select id="fs">
+  <select id="fs" aria-label="Filing status">
     <option value="single" selected>Single</option>
     <option value="married">Married</option>
   </select>
 
   <div class="label"><span>Income ($)</span></div>
-  <input id="inc" type="number" value="60000" min="0" />
+  <input id="inc" type="number" value="60000" min="0" aria-label="Income in dollars" />
 
   <div class="label"><span>Homeowner?</span></div>
-  <select id="ho">
+  <select id="ho" aria-label="Homeowner">
     <option value="1" selected>Yes</option>
     <option value="0">No (renter)</option>
   </select>
 
   <div class="label"><span>Home value ($)</span></div>
-  <input id="hv" type="number" value="300000" min="0" />
+  <input id="hv" type="number" value="300000" min="0" aria-label="Home value in dollars" />
 
   <div class="grid">
     <div>
       <div class="label"><span>Miles/year</span></div>
-      <input id="mi" type="number" value="12000" min="0" />
+  <input id="mi" type="number" value="12000" min="0" aria-label="Miles driven per year" />
     </div>
     <div>
       <div class="label"><span>MPG</span></div>
-      <input id="mpg" type="number" value="28" min="1" />
+  <input id="mpg" type="number" value="28" min="1" aria-label="Vehicle miles per gallon" />
     </div>
   </div>
 
   <div class="grid">
     <div>
       <div class="label"><span>Spending share</span><span class="badge" id="ssb">60%</span></div>
-      <input id="ss" type="range" min="0.2" max="0.95" step="0.01" value="0.60" />
+  <input id="ss" type="range" min="0.2" max="0.95" step="0.01" value="0.60" aria-label="Spending share" />
     </div>
     <div>
       <div class="label"><span>Taxable share</span><span class="badge" id="tsb">55%</span></div>
-      <input id="ts" type="range" min="0.2" max="0.95" step="0.01" value="0.55" />
+  <input id="ts" type="range" min="0.2" max="0.95" step="0.01" value="0.55" aria-label="Taxable share" />
     </div>
   </div>
 
@@ -47,11 +47,11 @@
     <div class="grid">
       <div>
         <div class="label"><span>Cig packs/week</span></div>
-        <input id="cig" type="number" value="0" min="0" step="0.1" />
+  <input id="cig" type="number" value="0" min="0" step="0.1" aria-label="Cigarette packs per week" />
       </div>
       <div>
         <div class="label"><span>Alcohol units/week</span></div>
-        <input id="alc" type="number" value="0" min="0" step="1" />
+  <input id="alc" type="number" value="0" min="0" step="1" aria-label="Alcohol units per week" />
       </div>
     </div>
   </details>
@@ -61,21 +61,23 @@
     <div class="grid">
       <div>
         <div class="label"><span>Include federal?</span></div>
-        <select id="fed">
+        <select id="fed" aria-label="Include federal taxes">
           <option value="0" selected>No</option>
           <option value="1">Yes</option>
         </select>
       </div>
       <div>
         <div class="label"><span>Long-term cap gains ($)</span></div>
-        <input id="ltcg" type="number" value="0" min="0" step="1000" />
+  <input id="ltcg" type="number" value="0" min="0" step="1000" aria-label="Long-term capital gains" />
       </div>
     </div>
   </details>
 </form>
 
 <script type="module">
-  const root = document.currentScript.parentElement;
+  // document.currentScript is null when this module is executed as a JS module
+  // (type="module"), so fall back to querying the form by its aria label.
+  const root = (document.currentScript && document.currentScript.parentElement) || document.querySelector('form[aria-label="Tax inputs"]');
 
   const q = (id) => root.querySelector('#'+id);
   const state = {

@@ -31,10 +31,10 @@ const s = (code || 'CA').toUpperCase();
     <meta property="og:description" content={`Transparent estimate of ${s} state & local taxes with optional federal layer.`} />
   </head>
   <body>
-    <main class="container grid" style="grid-template-columns: 420px 1fr; align-items:start">
+    <main class="container grid grid--sidebar">
       <section class="panel stack">
         <a href="/" class="badge" aria-label="Back to home">← Home</a>
-        <h1 style="margin:.2rem 0">Taxes in {s}, 2025</h1>
+        <h1 class="heading--tight">Taxes in {s}, 2025</h1>
         <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> • built {pack.registry.built_at}</div>
 
         <Assumptions pack={pack} />

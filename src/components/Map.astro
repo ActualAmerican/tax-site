@@ -1,78 +1,309 @@
 ---
-/* T1 – US map (self-contained; no external script file needed) */
+import { geoAlbersUsa, geoPath } from 'd3-geo';
+import { feature, mesh } from 'topojson-client';
+
+export interface Props { }
+
+// Canvas size used for projection and the SVG viewBox.
+const WIDTH = 960;
+const HEIGHT = 520;
+
+// Server-side: pre-render SVG paths so the map appears without client bundling.
+let statePaths = [];
+let nationPath = '';
+if (import.meta.env.SSR) {
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const topoPath = path.resolve(process.cwd(), 'public', 'topo', 'states-10m.json');
+    const txt = fs.readFileSync(topoPath, 'utf-8');
+    const topo = JSON.parse(txt);
+    const states = feature(topo, topo.objects.states);
+    const nation = mesh(topo, topo.objects.nation, (a, b) => a === b);
+
+    const projection = geoAlbersUsa().fitSize([WIDTH, HEIGHT], states);
+    const pathGen = geoPath(projection);
+
+    statePaths = (states.features || []).map((f) => ({ d: pathGen(f), id: f.id }));
+    if (nation) nationPath = pathGen(nation);
+  } catch (err) {
+    // If topo can't be read at build-time, leave paths empty and let client render later.
+    console.error('Map SSR pre-render failed:', err);
+  }
+}
 ---
 <div class="panel" data-t1-map>
   <div class="label"><strong>US Map</strong><span>Click a state</span></div>
-  <svg width="100%" height="520" role="img" aria-label="Map of the United States">
-    <g></g>
+  <!-- Simple map controls: zoom in, zoom out, reset -->
+  <div class="map-controls" role="toolbar" aria-label="Map controls">
+    <button id="map-zoom-in" type="button" class="map-control-btn" aria-label="Zoom in" title="Zoom in">+</button>
+    <button id="map-zoom-out" type="button" class="map-control-btn" aria-label="Zoom out" title="Zoom out">−</button>
+    <button id="map-reset" type="button" class="map-control-btn" aria-label="Reset view" title="Reset view">⤢</button>
+  </div>
+  <svg
+    width="100%"
+    height="520"
+    viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+    preserveAspectRatio="xMidYMid meet"
+    role="img"
+    aria-label="Map of the United States"
+    tabindex="0"
+  >
+    <!-- group we will pan/zoom by manipulating the SVG viewBox from client-side -->
+    <g id="mapGroup">
+      {statePaths.map(p => (
+        <path d={p.d} data-fips={p.id} class="state" />
+      ))}
+      {nationPath ? <path d={nationPath} class="nation" /> : null}
+    </g>
   </svg>
 </div>
 
+<!-- Lightweight client script to attach click handlers and dispatch state events. -->
 <script type="module">
-  (async () => {
-    // Load ESM versions of d3-geo and topojson-client so the browser can resolve bare imports.
-    const d3 = await import('https://esm.sh/d3-geo@3');
-    const topojson = await import('https://esm.sh/topojson-client@3');
+  // Parse the SVG viewBox at runtime to obtain WIDTH/HEIGHT so we don't need server-side injection here.
+  // This avoids template interpolation issues and keeps the script robust when executed in the browser.
 
-    const { geoAlbersUsa, geoPath } = d3;
-    const { feature, mesh } = topojson;
-
+  function initMapClient() {
     const root = document.querySelector('[data-t1-map]');
-    if (!root) return; // Not on this page — bail out.
-
+    if (!root) return;
     const svg = root.querySelector('svg');
-    const g = svg.querySelector('g');
+    if (!svg) return;
 
-    let topoCache = null;
+    // --- Click handlers (existing behavior) ---
+    svg.querySelectorAll('.state').forEach((p) => {
+      p.addEventListener('click', (ev) => {
+        // Don't emit click while dragging (pointer events handle panning)
+        if (p.__t1_isDragging) return;
+        const f = p.getAttribute('data-fips');
+        if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: f }));
+      });
+    });
 
-    async function loadTopo() {
-      if (topoCache) return topoCache;
-      const res = await fetch('/topo/states-10m.json');
-      if (!res.ok) throw new Error('Failed to load topojson: ' + res.status);
-      topoCache = await res.json();
-      return topoCache;
+    // Pointer events for SVG states are provided via CSS (avoid inline style mutations).
+
+  // --- Pan & Zoom using viewBox manipulation ---
+  // read initial viewBox from the svg element (format: 'x y w h')
+  const vbStr = svg.getAttribute('viewBox') || '0 0 960 520';
+  const vbParts = vbStr.trim().split(/\s+/).map(Number);
+  const [vbX, vbY, vbW, vbH] = vbParts;
+  let vb = { x: vbX || 0, y: vbY || 0, w: vbW || 960, h: vbH || 520 };
+  const WIDTH = vb.w;
+  const HEIGHT = vb.h;
+  const minW = WIDTH * 0.15; // max zoom-in
+  const maxW = WIDTH * 1.8;  // max zoom-out
+
+    // Debounced emitter so other components can listen to view changes without flooding.
+    let _emitTimeout = null;
+    function emitMapViewDebounced() {
+      if (_emitTimeout) clearTimeout(_emitTimeout);
+      _emitTimeout = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('t1:map-view', { detail: { x: vb.x, y: vb.y, w: vb.w, h: vb.h } }));
+        // Also detect center state once per debounce and emit t1:state so Breakdown updates
+        detectCenterStateAndEmit();
+        _emitTimeout = null;
+      }, 80);
     }
 
-    async function render() {
-      const topo = await loadTopo();
-      const states = feature(topo, topo.objects.states);
-      const nation = mesh(topo, topo.objects.nation, (a, b) => a === b);
+    function setViewBox() {
+      svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+      emitMapViewDebounced();
+    }
 
-      const width = root.clientWidth || 960;
-      const height = 520;
+    setViewBox();
+    // Emit initial view synchronously once
+    window.dispatchEvent(new CustomEvent('t1:map-view', { detail: { x: vb.x, y: vb.y, w: vb.w, h: vb.h } }));
 
-      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    // Wheel to zoom (centered on pointer)
+    svg.addEventListener('wheel', (evt) => {
+      evt.preventDefault();
+      const rect = svg.getBoundingClientRect();
+      const cx = (evt.clientX - rect.left) / rect.width;
+      const cy = (evt.clientY - rect.top) / rect.height;
+      const px = vb.x + cx * vb.w;
+      const py = vb.y + cy * vb.h;
 
-      const projection = geoAlbersUsa().fitSize([width, height], states);
-      const path = geoPath().projection(projection);
+      const zoomFactor = evt.deltaY < 0 ? 0.9 : 1.1;
+      const newW = Math.max(minW, Math.min(maxW, vb.w * zoomFactor));
+      const newH = (newW * HEIGHT) / WIDTH;
+      const factor = newW / vb.w;
 
-      g.innerHTML = '';
+      vb.x = px - (px - vb.x) * factor;
+      vb.y = py - (py - vb.y) * factor;
+      vb.w = newW;
+      vb.h = newH;
+      clampVB();
+      setViewBox();
+    }, { passive: false });
 
-      for (const f of states.features) {
-        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        p.setAttribute('d', path(f));
-        if (f.id != null) p.setAttribute('data-fips', f.id);
-        p.setAttribute('class', 'state');
-        g.appendChild(p);
+    // Drag to pan (pointer events)
+    let dragging = false;
+    let dragStart = null;
+    let vbStart = null;
+
+    svg.addEventListener('pointerdown', (e) => {
+      // Only start drag when primary button
+      if (e.button !== 0) return;
+      dragging = true;
+      dragStart = { x: e.clientX, y: e.clientY };
+      vbStart = { ...vb };
+      try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+      // mark states so click handlers can ignore if drag happened
+      svg.querySelectorAll('.state').forEach((p) => (p.__t1_isDragging = false));
+    });
+
+    svg.addEventListener('pointermove', (e) => {
+      if (!dragging || !dragStart || !vbStart) return;
+      const rect = svg.getBoundingClientRect();
+      const dx = (dragStart.x - e.clientX) / rect.width * vbStart.w;
+      const dy = (dragStart.y - e.clientY) / rect.height * vbStart.h;
+      vb.x = vbStart.x + dx;
+      vb.y = vbStart.y + dy;
+      clampVB();
+      setViewBox();
+      // mark that a drag occurred so underlying click handlers ignore it
+      svg.querySelectorAll('.state').forEach((p) => (p.__t1_isDragging = true));
+    });
+
+    svg.addEventListener('pointerup', (e) => {
+      if (!dragging) return;
+      dragging = false;
+      try { svg.releasePointerCapture(e.pointerId); } catch (err) {}
+      dragStart = null;
+      vbStart = null;
+      // small debounce already in setViewBox, but ensure emit after pointer end
+      emitMapViewDebounced();
+    });
+
+    svg.addEventListener('pointercancel', () => {
+      dragging = false; dragStart = null; vbStart = null;
+    });
+
+    // Double-click resets view
+    svg.addEventListener('dblclick', (e) => {
+      vb = { x: 0, y: 0, w: WIDTH, h: HEIGHT };
+      setViewBox();
+    });
+
+    // Hook up control buttons
+    const btnZoomIn = root.querySelector('#map-zoom-in');
+    const btnZoomOut = root.querySelector('#map-zoom-out');
+    const btnReset = root.querySelector('#map-reset');
+    if (btnZoomIn) btnZoomIn.addEventListener('click', () => {
+      const px = vb.x + vb.w / 2; const py = vb.y + vb.h / 2;
+      const newW = Math.max(minW, vb.w * 0.92);
+      const newH = (newW * HEIGHT) / WIDTH;
+      const factor = newW / vb.w;
+      vb.x = px - (px - vb.x) * factor;
+      vb.y = py - (py - vb.y) * factor;
+      vb.w = newW; vb.h = newH; clampVB(); setViewBox();
+    });
+    if (btnZoomOut) btnZoomOut.addEventListener('click', () => {
+      const px = vb.x + vb.w / 2; const py = vb.y + vb.h / 2;
+      const newW = Math.min(maxW, vb.w / 0.92);
+      const newH = (newW * HEIGHT) / WIDTH;
+      const factor = newW / vb.w;
+      vb.x = px - (px - vb.x) * factor;
+      vb.y = py - (py - vb.y) * factor;
+      vb.w = newW; vb.h = newH; clampVB(); setViewBox();
+    });
+    if (btnReset) btnReset.addEventListener('click', () => {
+      vb = { x: 0, y: 0, w: WIDTH, h: HEIGHT }; setViewBox();
+    });
+
+    // Keep viewBox within the map bounds (avoid blank margins)
+    function clampVB() {
+      // Clamp horizontal
+      if (vb.w <= WIDTH) {
+        vb.x = Math.max(0, Math.min(vb.x, WIDTH - vb.w));
+      } else {
+        // center when zoomed out
+        vb.x = (WIDTH - vb.w) / 2;
+      }
+      // Clamp vertical
+      if (vb.h <= HEIGHT) {
+        vb.y = Math.max(0, Math.min(vb.y, HEIGHT - vb.h));
+      } else {
+        vb.y = (HEIGHT - vb.h) / 2;
+      }
+    }
+
+    // Try to detect which state sits at the center of the current viewBox and dispatch a state event.
+    let _lastCenterState = null;
+    function detectCenterStateAndEmit() {
+      try {
+        const rect = svg.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const el = document.elementFromPoint(cx, cy);
+        if (!el) return;
+        const path = el.closest && el.closest('.state') ? el.closest('.state') : (el.classList && el.classList.contains('state') ? el : null);
+        if (path) {
+          const f = path.getAttribute('data-fips');
+          if (f && f !== _lastCenterState) {
+            _lastCenterState = f;
+            window.dispatchEvent(new CustomEvent('t1:state', { detail: f }));
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    // --- Keyboard accessibility: arrow keys to pan, +/- to zoom, 0/Home to reset ---
+    svg.addEventListener('keydown', (evt) => {
+      // Only respond when svg has focus
+      const stepFraction = evt.shiftKey ? 0.25 : 0.08; // hold shift for larger jumps
+      const zoomFactor = evt.shiftKey ? 0.8 : 0.92;
+      let handled = false;
+
+      if (evt.key === 'ArrowLeft') {
+        vb.x -= vb.w * stepFraction; handled = true;
+      } else if (evt.key === 'ArrowRight') {
+        vb.x += vb.w * stepFraction; handled = true;
+      } else if (evt.key === 'ArrowUp') {
+        vb.y -= vb.h * stepFraction; handled = true;
+      } else if (evt.key === 'ArrowDown') {
+        vb.y += vb.h * stepFraction; handled = true;
+      } else if (evt.key === '+' || evt.key === '=' ) {
+        // zoom in centered on viewport center
+        const px = vb.x + vb.w / 2;
+        const py = vb.y + vb.h / 2;
+        const newW = Math.max(minW, vb.w * zoomFactor);
+        const newH = (newW * HEIGHT) / WIDTH;
+        const factor = newW / vb.w;
+        vb.x = px - (px - vb.x) * factor;
+        vb.y = py - (py - vb.y) * factor;
+        vb.w = newW; vb.h = newH;
+        handled = true;
+      } else if (evt.key === '-' ) {
+        const px = vb.x + vb.w / 2;
+        const py = vb.y + vb.h / 2;
+        const newW = Math.min(maxW, vb.w / zoomFactor);
+        const newH = (newW * HEIGHT) / WIDTH;
+        const factor = newW / vb.w;
+        vb.x = px - (px - vb.x) * factor;
+        vb.y = py - (py - vb.y) * factor;
+        vb.w = newW; vb.h = newH;
+        handled = true;
+      } else if (evt.key === '0' || evt.key === 'Home') {
+        vb = { x: 0, y: 0, w: WIDTH, h: HEIGHT }; handled = true;
       }
 
-      if (nation) {
-        const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        outline.setAttribute('d', path(nation));
-        outline.setAttribute('class', 'nation');
-        g.appendChild(outline);
+      if (handled) {
+        evt.preventDefault();
+        setViewBox();
       }
-    }
+    });
+  }
 
-    try {
-      await render();
-      addEventListener('resize', render);
-    } catch (err) {
-      // Log to console for debugging in browser
-      // eslint-disable-next-line no-console
-      console.error('Map render failed:', err);
-    }
-  })();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMapClient);
+  } else {
+    initMapClient();
+  }
+
 </script>
+
 
 

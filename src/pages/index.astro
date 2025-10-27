@@ -7,6 +7,7 @@ import Breakdown from '../components/Breakdown.astro';
 import Assumptions from '../components/Assumptions.astro';
 import ContextCards from '../components/ContextCards.astro';
 import pack from '../../data/packs/2025.1.0.json';
+// Removed mapScript import as Map.astro will handle it.
 ---
 
 <html lang="en">
@@ -30,9 +31,9 @@ import pack from '../../data/packs/2025.1.0.json';
     </script>
   </head>
   <body>
-    <main class="container grid" style="grid-template-columns: 420px 1fr; align-items:start">
+    <main class="container grid grid--sidebar">
       <section class="panel stack">
-        <h1 style="margin:.2rem 0">T1 — State + Federal Tax Burden Map</h1>
+        <h1 class="heading--tight">T1 — State + Federal Tax Burden Map</h1>
         <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> • built {pack.registry.built_at}</div>
 
         <Inputs id="inputs" />
@@ -40,7 +41,7 @@ import pack from '../../data/packs/2025.1.0.json';
       </section>
 
       <section class="stack">
-        <Map />
+          <Map />
         <Breakdown />
         <ContextCards pack={pack} />
       </section>

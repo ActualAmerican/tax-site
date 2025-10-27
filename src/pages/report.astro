@@ -95,27 +95,27 @@ const eff = total / Math.max(1, inputs.income);
     <title>T1 Report — {state}</title>
   </head>
   <body>
-    <main style="max-width:800px;margin:0 auto;padding:24px">
-      <header style="display:flex;justify-content:space-between;align-items:baseline">
-        <h1 style="margin:0">T1 — {state} Tax Report</h1>
+    <main class="report-container">
+      <header class="header--space">
+        <h1 class="title-reset">T1 — {state} Tax Report</h1>
         <div>Pack {pack.registry.pack_version} • {pack.registry.built_at}</div>
       </header>
       <hr/>
-      <h2 style="margin:.2rem 0">Inputs</h2>
-      <pre style="white-space:pre-wrap;background:#f6f8fa;border:1px solid #e5e7eb;padding:12px;border-radius:8px;font-size:12px">{JSON.stringify({state, ...inputs}, null, 2)}</pre>
-      <h2 style="margin:.2rem 0">Breakdown</h2>
-      <table style="width:100%;border-collapse:collapse">
-        <thead><tr><th style="text-align:left">Category</th><th style="text-align:right">Amount</th><th style="text-align:right">%</th></tr></thead>
+      <h2 class="heading--tight">Inputs</h2>
+      <pre class="pre-wrap">{JSON.stringify({state, ...inputs}, null, 2)}</pre>
+      <h2 class="heading--tight">Breakdown</h2>
+      <table class="table-full">
+        <thead><tr><th class="">Category</th><th class="text-right">Amount</th><th class="text-right">%</th></tr></thead>
         <tbody>
-          {rows.map(([k,v]) => (<tr><td>{k}</td><td style="text-align:right">{fmt$(v)}</td><td style="text-align:right">{fmtP(v/Math.max(1,inputs.income))}</td></tr>))}
+          {rows.map(([k,v]) => (<tr><td>{k}</td><td class="text-right">{fmt$(v)}</td><td class="text-right">{fmtP(v/Math.max(1,inputs.income))}</td></tr>))}
         </tbody>
-        <tfoot><tr><th style="text-align:left">Total</th><th style="text-align:right">{fmt$(total)}</th><th style="text-align:right">{fmtP(eff)}</th></tr></tfoot>
+        <tfoot><tr><th>Total</th><th class="text-right">{fmt$(total)}</th><th class="text-right">{fmtP(eff)}</th></tr></tfoot>
       </table>
       <h3>Sources (provenance)</h3>
       <ul>
         {pack.registry.sources.map((s:any)=>(<li>{s.metric}{s.state?` (${s.state})`:''}: {s.url} — checked {s.checked_at}</li>))}
       </ul>
-      <p style="font-size:12px;color:#555">Transparent approximations; official instructions may differ. No PII stored.</p>
+      <p class="muted-note">Transparent approximations; official instructions may differ. No PII stored.</p>
     </main>
   </body>
 </html>

@@ -15,20 +15,20 @@ const slot = compareSlot ?? 'solo';
 
   <div id="chart" class="bar" aria-label="Stacked tax burden bar"></div>
 
-  <table id="tbl" style="width:100%;border-collapse:collapse">
+  <table id="tbl" class="table-full">
     <thead>
       <tr>
-        <th style="text-align:left">Category</th>
-        <th style="text-align:right">Amount</th>
-        <th style="text-align:right">%</th>
+        <th>Category</th>
+        <th class="text-right">Amount</th>
+        <th class="text-right">%</th>
       </tr>
     </thead>
     <tbody></tbody>
     <tfoot>
       <tr>
-        <th style="text-align:left">Total</th>
-        <th id="tot" style="text-align:right"></th>
-        <th id="eff" style="text-align:right"></th>
+        <th>Total</th>
+        <th id="tot" class="text-right"></th>
+        <th id="eff" class="text-right"></th>
       </tr>
     </tfoot>
   </table>

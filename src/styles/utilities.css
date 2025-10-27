@@ -33,6 +33,50 @@ a {
 .grid-2 {
   grid-template-columns: 1fr 1fr;
 }
+/* Two-column layout with a fixed-width sidebar and fluid main area */
+.grid--sidebar {
+  grid-template-columns: 420px 1fr;
+  align-items: start;
+}
+.heading--tight {
+  margin: 0.2rem 0;
+}
+
+.report-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.pre-wrap {
+  white-space: pre-wrap;
+  background: #f6f8fa;
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.table-full {
+  width: 100%;
+  border-collapse: collapse;
+}
+.text-right {
+  text-align: right;
+}
+.muted-note {
+  font-size: 12px;
+  color: #555;
+}
+.big-number {
+  font-size: 1.4rem;
+}
+.header--space {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.title-reset {
+  margin: 0;
+}
 .label {
   display: flex;
   justify-content: space-between;
@@ -82,4 +126,91 @@ button {
 .bar section {
   height: 100%;
   display: inline-block;
+}
+/* T1 map styles */
+[data-t1-map] svg {
+  display: block;
+  width: 100%;
+  height: 520px; /* ensures the map never collapses */
+}
+[data-t1-map] .state {
+  fill: #0c121a;
+  stroke: var(--border);
+  stroke-width: 1;
+  cursor: pointer;
+  pointer-events: visiblePainted;
+}
+[data-t1-map] .state:hover,
+[data-t1-map] .state:focus {
+  fill: #16202b;
+  outline: none;
+}
+
+/* Remove the default focus outline on the svg when clicked; the visible focus for keyboard users remains via :focus-visible styles if desired */
+[data-t1-map] svg:focus {
+  outline: none;
+  box-shadow: none;
+}
+[data-t1-map] .nation {
+  fill: none;
+  stroke: var(--border);
+  stroke-opacity: 0.6;
+  pointer-events: none;
+}
+
+/* map control buttons (avoid inline styles) */
+.map-controls {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+.map-control-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+/* muted stack variant to replace inline styles used in assumptions */
+.stack--muted {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+/* ensure the map panel is the positioning ancestor for absolute controls */
+[data-t1-map] {
+  position: relative;
+}
+
+/* T1 map styles — make shapes visible and keep height */
+[data-t1-map] svg {
+  display: block;
+  width: 100%;
+  height: 520px; /* ensures the map never collapses */
+}
+
+[data-t1-map] .state {
+  fill: #0c121a; /* slightly lighter than the page bg */
+  stroke: var(--border); /* defined in tokens.css */
+  stroke-width: 1;
+  cursor: pointer;
+}
+
+[data-t1-map] .state:hover,
+[data-t1-map] .state:focus {
+  fill: #16202b; /* hover contrast */
+  outline: none;
+}
+
+[data-t1-map] .nation {
+  fill: none;
+  stroke: var(--border);
+  stroke-opacity: 0.6;
+  pointer-events: none;
 }
