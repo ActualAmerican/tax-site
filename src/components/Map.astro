@@ -9,13 +9,17 @@
 </div>
 
 <script type="module">
-  import { geoAlbersUsa, geoPath } from 'd3-geo';
-  import { feature, mesh } from 'topojson-client';
+  (async () => {
+    // Load ESM versions of d3-geo and topojson-client so the browser can resolve bare imports.
+    const d3 = await import('https://esm.sh/d3-geo@3');
+    const topojson = await import('https://esm.sh/topojson-client@3');
 
-  const root = document.querySelector('[data-t1-map]');
-  if (!root) {
-    // Not on this page — bail out.
-  } else {
+    const { geoAlbersUsa, geoPath } = d3;
+    const { feature, mesh } = topojson;
+
+    const root = document.querySelector('[data-t1-map]');
+    if (!root) return; // Not on this page — bail out.
+
     const svg = root.querySelector('svg');
     const g = svg.querySelector('g');
 
@@ -24,6 +28,7 @@
     async function loadTopo() {
       if (topoCache) return topoCache;
       const res = await fetch('/topo/states-10m.json');
+      if (!res.ok) throw new Error('Failed to load topojson: ' + res.status);
       topoCache = await res.json();
       return topoCache;
     }
@@ -59,9 +64,15 @@
       }
     }
 
-    render();
-    addEventListener('resize', render);
-  }
+    try {
+      await render();
+      addEventListener('resize', render);
+    } catch (err) {
+      // Log to console for debugging in browser
+      // eslint-disable-next-line no-console
+      console.error('Map render failed:', err);
+    }
+  })();
 </script>
 
 
