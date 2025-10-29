@@ -33,7 +33,7 @@ if (import.meta.env.SSR) {
 }
 ---
 <div class="panel" data-t1-map>
-  <div class="label"><strong>US Map</strong><span>Click a state</span></div>
+  <div class="label"><strong>US Map</strong><span id="map-selected" class="badge">No state</span></div>
   <!-- Simple map controls: zoom in, zoom out, reset -->
   <div class="map-controls" role="toolbar" aria-label="Map controls">
     <button id="map-zoom-in" type="button" class="map-control-btn" aria-label="Zoom in" title="Zoom in">+</button>
@@ -65,19 +65,150 @@ if (import.meta.env.SSR) {
   // This avoids template interpolation issues and keeps the script robust when executed in the browser.
 
   function initMapClient() {
-    const root = document.querySelector('[data-t1-map]');
-    if (!root) return;
-    const svg = root.querySelector('svg');
-    if (!svg) return;
+  const root = document.querySelector('[data-t1-map]');
+  if (!root) return;
+  const svg = root.querySelector('svg');
+  if (!svg) return;
+  // breadcrumb so we know the map script actually ran
+  root.setAttribute('data-js', 'ready');
+  // runtime diagnostic
+  try { console.log('initMapClient', { href: location.href }); } catch (e) {}
 
-    // --- Click handlers (existing behavior) ---
-    svg.querySelectorAll('.state').forEach((p) => {
-      p.addEventListener('click', (ev) => {
-        // Don't emit click while dragging (pointer events handle panning)
-        if (p.__t1_isDragging) return;
-        const f = p.getAttribute('data-fips');
-        if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: f }));
-      });
+const selBadge = root.querySelector('#map-selected');
+
+// Minimal FIPS → code map so the badge shows 'CA' instead of '06'
+const FIPS_TO_CODE = {
+  '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT',
+  '10':'DE','11':'DC','12':'FL','13':'GA','15':'HI','16':'ID','17':'IL',
+  '18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD',
+  '25':'MA','26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE',
+  '32':'NV','33':'NH','34':'NJ','35':'NM','36':'NY','37':'NC','38':'ND',
+  '39':'OH','40':'OK','41':'OR','42':'PA','44':'RI','45':'SC','46':'SD',
+  '47':'TN','48':'TX','49':'UT','50':'VT','51':'VA','53':'WA','54':'WV',
+  '55':'WI','56':'WY','72':'PR'
+};
+function fipsToCode(f) {
+  if (!f) return null;
+  const s = String(f);
+  const two = s.length === 1 ? '0' + s : s;
+  return FIPS_TO_CODE[two] || null;
+}
+
+// --- Selection & deep-link helpers ---
+let selectedFips = null;
+
+function selectState(fips, { emit = true, push = false } = {}) {
+  if (!fips) return;
+
+  // Toggle CSS class
+  if (selectedFips) {
+    const prev = svg.querySelector(`.state[data-fips="${selectedFips}"]`);
+    if (prev) prev.classList.remove('state--selected');
+  }
+  const next = svg.querySelector(`.state[data-fips="${fips}"]`);
+  if (next) next.classList.add('state--selected');
+  selectedFips = fips;
+
+// Update the badge text ("CA" or fallback to the FIPS)
+const code = fipsToCode(fips);
+if (selBadge) selBadge.textContent = code || fips;
+
+  try { console.log('selectState', { fips, code }); } catch (e) {}
+  // Ensure selected state is rendered above other shapes so its stroke is visible
+  try {
+    const group = svg.querySelector('#mapGroup');
+    if (group && next) group.appendChild(next);
+  } catch (e) {}
+
+  // Update URL (?fips=XX) without reload
+  try {
+    const url = new URL(location.href);
+    url.searchParams.set('fips', fips);
+    if (push) {
+      history.pushState({ fips }, '', url);
+    } else {
+      history.replaceState({ fips }, '', url);
+    }
+  } catch {}
+
+  // Notify listeners
+  if (emit) {
+    window.dispatchEvent(new CustomEvent('t1:state', { detail: fips }));
+  }
+}
+
+// Apply selection from URL on load
+(function applyInitialSelection() {
+  try {
+    const url = new URL(location.href);
+    const f = url.searchParams.get('fips');
+    if (f) selectState(f, { emit: true, push: false });
+  } catch {}
+})();
+
+// React to back/forward navigation
+window.addEventListener('popstate', (e) => {
+  const f = (e.state && e.state.fips) || (new URL(location.href)).searchParams.get('fips');
+  if (f) selectState(f, { emit: true, push: false });
+});
+
+    // --- Click handlers (per-path + delegated fallback) ---
+
+    // Update URL query param when a state is selected so the app can deep-link to state views.
+    function updateURLState(s) {
+      try {
+        const u = new URL(window.location.href);
+        if (s) u.searchParams.set('state', String(s));
+        else u.searchParams.delete('state');
+        window.history.replaceState({}, '', u.toString());
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    // Ensure state paths receive pointer events (some browsers/styles may override)
+    svg.querySelectorAll('.state').forEach((p) => { try { p.style.pointerEvents = 'auto'; } catch (e) {} });
+
+    // Single delegated click handler (robust): use elementFromPoint as a fallback
+    // and emit a single selection event. This avoids duplicate listeners and
+    // is resilient to overlays or small layout differences.
+    svg.addEventListener('click', (ev) => {
+      try {
+        // Prefer the event target. If an overlay sits on top of the svg (e.g. a
+        // panel that visually overlaps), use elementsFromPoint to search the
+        // stack for a .state element underneath.
+        let path = null;
+        if (ev.target instanceof Element) path = ev.target.closest ? ev.target.closest('.state') : null;
+
+        if (!path) {
+          // Look through the element stack under the pointer to find a .state
+          // even if it's not the topmost element.
+          if (document.elementsFromPoint) {
+            const els = document.elementsFromPoint(ev.clientX, ev.clientY);
+            for (const e of els) {
+              if (!(e instanceof Element)) continue;
+              const p = e.closest ? e.closest('.state') : (e.classList && e.classList.contains('state') ? e : null);
+              if (p) { path = p; break; }
+            }
+            // debug overlay situation
+                if (path && els[0] !== path) {
+                  try { console.log('map:click overlay hit — top element', els[0], 'found state underneath', path); } catch (e) {}
+                }
+          } else {
+            // fallback to elementFromPoint
+            const el = document.elementFromPoint(ev.clientX, ev.clientY);
+            path = el && el.closest ? el.closest('.state') : (el && el.classList && el.classList.contains('state') ? el : null);
+          }
+        }
+
+        if (!path) return;
+        const f = path.getAttribute('data-fips');
+        if (!f) return;
+        try { console.log('map:click', { fips: f }); } catch (e) {}
+        selectState(f, { emit: true, push: true });
+      } catch (err) {
+        try { console.warn('map click handler error', err); } catch (e) {}
+      }
     });
 
     // Pointer events for SVG states are provided via CSS (avoid inline style mutations).
@@ -243,6 +374,7 @@ if (import.meta.env.SSR) {
           if (f && f !== _lastCenterState) {
             _lastCenterState = f;
             window.dispatchEvent(new CustomEvent('t1:state', { detail: f }));
+            updateURLState(f);
           }
         }
       } catch (err) {
@@ -298,9 +430,22 @@ if (import.meta.env.SSR) {
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initMapClient);
+    document.addEventListener('DOMContentLoaded', () => {
+      initMapClient();
+      // If a `state` query param is present on load, broadcast it so other panels sync.
+      try {
+        const params = new URL(window.location.href).searchParams;
+        const s = params.get('state');
+        if (s) window.dispatchEvent(new CustomEvent('t1:state', { detail: s }));
+      } catch (err) {}
+    });
   } else {
     initMapClient();
+    try {
+      const params = new URL(window.location.href).searchParams;
+      const s = params.get('state');
+      if (s) window.dispatchEvent(new CustomEvent('t1:state', { detail: s }));
+    } catch (err) {}
   }
 
 </script>

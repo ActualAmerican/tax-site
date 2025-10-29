@@ -214,3 +214,31 @@ button {
   stroke-opacity: 0.6;
   pointer-events: none;
 }
+/* Map: make sure state paths actually receive clicks */
+[data-t1-map] .state {
+  pointer-events: auto;
+}
+/* Selected state highlight */
+[data-t1-map] .state--selected {
+  fill: #1f2a36;
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+/* Improve stroke rendering for selected shapes to avoid visual clipping */
+[data-t1-map] .state,
+[data-t1-map] .state--selected {
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Ensure stroke renders above fills and uses rounded caps to avoid clipping */
+[data-t1-map] .state {
+  paint-order: stroke fill markers;
+  stroke-linecap: round;
+}
+
+[data-t1-map] .state--selected {
+  paint-order: stroke fill markers;
+  stroke-linecap: round;
+}

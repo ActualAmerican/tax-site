@@ -40,34 +40,219 @@ const slot = compareSlot ?? 'solo';
 
 <!-- Small client script to listen for state change events and update this panel's UI/export link -->
 <script type="module">
-  (function(){
-    const root = document.currentScript?.previousElementSibling;
+  (function () {
+    // Find this panel reliably when executed as a module
+    const root =
+      (document.currentScript && document.currentScript.previousElementSibling) ||
+      document.querySelector('[data-t1-breakdown]');
     if (!root) return;
+
+    // Determine which compare slot this panel represents
     const slot = root.getAttribute('data-slot') || 'solo';
+
     const stateLabel = root.querySelector('#bd-state');
     const exportLink = root.querySelector('#export');
 
-    function updateState(s){
-      root.setAttribute('data-state', s);
-      if(stateLabel) stateLabel.textContent = s;
-      if(exportLink) exportLink.setAttribute('href', `/report?state=${s}`);
+    // Minimal FIPS -> USPS code map (add more if needed)
+    const FIPS_TO_CODE = {
+      '01': 'AL','02': 'AK','04': 'AZ','05': 'AR','06': 'CA','08': 'CO','09': 'CT',
+      '10': 'DE','11': 'DC','12': 'FL','13': 'GA','15': 'HI','16': 'ID','17': 'IL',
+      '18': 'IN','19': 'IA','20': 'KS','21': 'KY','22': 'LA','23': 'ME','24': 'MD',
+      '25': 'MA','26': 'MI','27': 'MN','28': 'MS','29': 'MO','30': 'MT','31': 'NE',
+      '32': 'NV','33': 'NH','34': 'NJ','35': 'NM','36': 'NY','37': 'NC','38': 'ND',
+      '39': 'OH','40': 'OK','41': 'OR','42': 'PA','44': 'RI','45': 'SC','46': 'SD',
+      '47': 'TN','48': 'TX','49': 'UT','50': 'VT','51': 'VA','53': 'WA','54': 'WV',
+      '55': 'WI','56': 'WY','72': 'PR'
+    };
+
+    function normalizeStateCode(input) {
+      // Accept 'CA' or '06' and normalize to 'CA'
+      if (!input) return null;
+      const s = String(input).toUpperCase();
+      if (s.length === 2 && /[A-Z]{2}/.test(s)) return s;
+      if (s.length <= 2) {
+        const two = s.padStart(2, '0');
+        return FIPS_TO_CODE[two] || null;
+      }
+      return null;
     }
 
-    // generic event that set any slot
-    window.addEventListener('t1:state', (e)=>{
-      const s = e.detail; if(!s) return; if(slot === 'solo') updateState(s);
+    // Keep the latest input state so we can compute a demo breakdown client-side
+    let latestInputs = {
+      income: 60000,
+      homeValue: 300000,
+      homeowner: true
+    };
+
+    function renderBreakdownRows(rows) {
+      const tbody = root.querySelector('tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        const tdCat = document.createElement('td'); tdCat.textContent = r.label;
+        const tdAmt = document.createElement('td'); tdAmt.className = 'text-right'; tdAmt.textContent = r.amount;
+        const tdPct = document.createElement('td'); tdPct.className = 'text-right'; tdPct.textContent = r.pct;
+        tr.appendChild(tdCat); tr.appendChild(tdAmt); tr.appendChild(tdPct);
+        tbody.appendChild(tr);
+      }
+    }
+
+    // Cache pack data to avoid refetching
+    let _packCache = null;
+    async function loadPack() {
+      if (_packCache) return _packCache;
+      try {
+        const res = await fetch('/data/packs/2025.1.0.json');
+        if (!res.ok) throw new Error('pack fetch failed');
+        _packCache = await res.json();
+        return _packCache;
+      } catch (err) {
+        console.warn('Breakdown: failed to load pack', err);
+        _packCache = null;
+        return null;
+      }
+    }
+
+    function findRow(arr, state) {
+      if (!arr) return null;
+      return (arr.find(r => String(r.state).toUpperCase() === String(state).toUpperCase()) || null);
+    }
+
+    async function computeDemoBreakdown(code) {
+      const inc = Number(latestInputs.income) || 0;
+      const hv = Number(latestInputs.homeValue) || 0;
+      const home = !!latestInputs.homeowner;
+
+      const pack = await loadPack();
+      // Income tax calculation (replicates src/lib/calc/income.ts basic logic)
+      let incomeTax = 0;
+      if (pack && pack.income) {
+        const row = findRow(pack.income, code);
+        if (row && row.has_income_tax) {
+          const std = row.standard_deduction || 0;
+          const taxable = Math.max(0, inc - std);
+          if (row.flat != null) incomeTax = Math.round(taxable * row.flat);
+          else {
+            const brackets = row.brackets || [];
+            let prev = 0;
+            for (const b of brackets) {
+              const cap = (b.up_to == null) ? taxable : b.up_to;
+              const slice = Math.max(0, Math.min(taxable, cap) - prev);
+              incomeTax += Math.round(slice * b.rate);
+              prev = cap;
+              if (prev >= taxable) break;
+            }
+          }
+        }
+      } else {
+        // fallback reasonable estimate
+        incomeTax = Math.round(inc * 0.06);
+      }
+
+      // Sales tax: approximate as spendingShare * income * combined_rate
+      let salesTax = 0;
+      if (pack && pack.sales) {
+        const srow = findRow(pack.sales, code);
+        const rate = srow ? (srow.combined_rate || 0) : 0;
+        const spendingShare = Number(latestInputs.spendingShare) || 0.6;
+        salesTax = Math.round(inc * spendingShare * rate);
+      } else salesTax = Math.round(inc * 0.01);
+
+      // Property tax: homeValue * effective_rate
+      let propertyTax = 0;
+      if (pack && pack.property) {
+        const prow = findRow(pack.property, code);
+        const eff = prow ? (prow.effective_rate || 0) : 0;
+        propertyTax = Math.round(hv * eff);
+      } else propertyTax = home ? Math.round(hv * 0.004) : 0;
+
+      const total = incomeTax + salesTax + propertyTax;
+
+      const fmt = (v) => '$' + (v).toLocaleString();
+
+      const rows = [
+        { label: 'Income tax', amount: fmt(incomeTax), pct: ((incomeTax / (total || 1) * 100) || 0).toFixed(0) + '%' },
+        { label: 'Sales tax', amount: fmt(salesTax), pct: ((salesTax / (total || 1) * 100) || 0).toFixed(0) + '%' },
+        { label: 'Property tax', amount: fmt(propertyTax), pct: ((propertyTax / (total || 1) * 100) || 0).toFixed(0) + '%' }
+      ];
+
+      // Update totals row
+      const tot = root.querySelector('#tot');
+      const eff = root.querySelector('#eff');
+      if (tot) tot.textContent = '$' + total.toLocaleString();
+      if (eff) eff.textContent = ((total / Math.max(1, inc)) * 100).toFixed(1) + '%';
+
+      renderBreakdownRows(rows);
+    }
+
+    function updateState(val) {
+      const code = normalizeStateCode(val);
+      try { console.log('Breakdown:updateState raw', val, 'normalized', code); } catch (e) {}
+
+      // Read current inputs directly from the page to ensure we use the
+      // most recent committed values when switching states. This avoids
+      // requiring the user to change an input to force a recompute.
+      // helper to parse formatted numeric strings (commas, $ etc.)
+      function _parseNum(v) { try { return Number(String(v).replace(/[^0-9.\-\.]/g, '')) || 0; } catch (e) { return 0; } }
+      try {
+        const form = document.querySelector('form[aria-label="Tax inputs"]');
+        if (form) {
+          const get = id => form.querySelector('#' + id);
+          const incEl = get('inc');
+          const hvEl = get('hv');
+          const hoEl = get('ho');
+          latestInputs.income = incEl ? _parseNum(incEl.value) : latestInputs.income;
+          latestInputs.homeValue = hvEl ? _parseNum(hvEl.value) : latestInputs.homeValue;
+          latestInputs.homeowner = hoEl ? (hoEl.value === '1') : latestInputs.homeowner;
+        }
+      } catch (err) { /* ignore */ }
+
+      if (!code) return;
+
+      root.setAttribute('data-state', code);
+      if (stateLabel) stateLabel.textContent = code;
+      if (exportLink) exportLink.setAttribute('href', `/report?state=${code}`);
+
+      // Recompute demo breakdown with the latest inputs
+      computeDemoBreakdown(code);
+    }
+
+    // Generic event: map clicks dispatch 't1:state' with FIPS; normalize and update
+    window.addEventListener('t1:state', (e) => {
+      const s = e.detail;
+      try { console.log('Breakdown: received t1:state', s); } catch (e) {}
+      if (!s) return;
+      if (slot === 'solo') updateState(s);
     });
 
-    window.addEventListener('t1:state-left', (e)=>{
-      const s = e.detail; if(!s) return; if(slot === 'left') updateState(s);
-    });
-    window.addEventListener('t1:state-right', (e)=>{
-      const s = e.detail; if(!s) return; if(slot === 'right') updateState(s);
+    // Listen for input changes so breakdown can update live
+    window.addEventListener('t1:inputs', (e) => {
+      try {
+        const d = e.detail || {};
+        try { console.log('Breakdown: received t1:inputs', d); } catch (e) {}
+        latestInputs.income = (d.income != null) ? d.income : latestInputs.income;
+        latestInputs.homeValue = (d.homeValue != null) ? d.homeValue : latestInputs.homeValue;
+        latestInputs.homeowner = (typeof d.homeowner === 'boolean') ? d.homeowner : latestInputs.homeowner;
+        // Recompute breakdown for current state
+        const cur = root.getAttribute('data-state') || stateLabel.textContent;
+        computeDemoBreakdown(cur);
+      } catch (err) { console.warn('Breakdown t1:inputs handler error', err); }
     });
 
-    // Also listen for a direct click/update API
-    root.addEventListener('t1:set-state', (ev)=>{
-      const s = ev.detail; if(s) updateState(s);
-    });
+    // Compare slots (future)
+    window.addEventListener('t1:state-left',  (e) => { if (slot === 'left')  updateState(e.detail); });
+    window.addEventListener('t1:state-right', (e) => { if (slot === 'right') updateState(e.detail); });
+
+    // Direct API for programmatic control
+    root.addEventListener('t1:set-state', (ev) => { if (ev.detail) updateState(ev.detail); });
+
+    // Initialize from URL (?fips=06 or ?state=CA)
+    try {
+      const url = new URL(location.href);
+      const fips  = url.searchParams.get('fips');
+      const state = url.searchParams.get('state');
+      updateState(state || fips);
+    } catch {}
   })();
 </script>

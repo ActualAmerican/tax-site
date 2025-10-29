@@ -4,11 +4,68 @@ import { feature, mesh } from "topojson-client";
 
 const root = document.querySelector<HTMLElement>("[data-t1-map]");
 if (!root) {
-  // Not on this page — bail out.
-  // (No-op; just return from the module body.)
+  // Not on this page — do nothing
 } else {
   const svg = root.querySelector<SVGSVGElement>("svg")!;
   const g = svg.querySelector<SVGGElement>("g")!;
+  // --- Selection & deep-link helpers ---
+  let selectedFips: string | null = null;
+
+  function selectState(
+    fips: string,
+    opts: { emit?: boolean; push?: boolean } = {}
+  ) {
+    const { emit = true, push = false } = opts;
+
+    // Toggle CSS class
+    if (selectedFips) {
+      const prev = svg.querySelector<SVGPathElement>(
+        `.state[data-fips="${selectedFips}"]`
+      );
+      if (prev) prev.classList.remove("state--selected");
+    }
+    const next = svg.querySelector<SVGPathElement>(
+      `.state[data-fips="${fips}"]`
+    );
+    if (next) next.classList.add("state--selected");
+    selectedFips = fips;
+
+    // Update URL (?fips=XX)
+    try {
+      const url = new URL(location.href);
+      url.searchParams.set("fips", fips);
+      if (push) history.pushState({ fips }, "", url);
+      else history.replaceState({ fips }, "", url);
+    } catch {}
+
+    // Notify listeners
+    if (emit) {
+      window.dispatchEvent(new CustomEvent("t1:state", { detail: fips }));
+    }
+  }
+
+  // Apply selection from URL on load
+  (function applyInitialSelection() {
+    try {
+      const url = new URL(location.href);
+      const f = url.searchParams.get("fips");
+      if (f) selectState(f, { emit: true, push: false });
+    } catch {}
+  })();
+
+  // React to back/forward
+  window.addEventListener("popstate", (e: PopStateEvent) => {
+    const f =
+      (e.state && (e.state as any).fips) ||
+      (() => {
+        try {
+          return new URL(location.href).searchParams.get("fips");
+        } catch {
+          return null;
+        }
+      })();
+    if (f) selectState(f, { emit: true, push: false });
+  });
 
   let topoCache: any = null;
 
@@ -36,10 +93,14 @@ if (!root) {
 
     // Draw states
     for (const f of (states as any).features) {
+      const fips = String(f.id);
       const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
       p.setAttribute("d", path(f)!);
-      p.setAttribute("data-fips", f.id);
+      p.setAttribute("data-fips", fips);
       p.setAttribute("class", "state");
+      p.addEventListener("click", () =>
+        selectState(fips, { emit: true, push: true })
+      );
       g.appendChild(p);
     }
 
@@ -54,7 +115,13 @@ if (!root) {
       g.appendChild(outline);
     }
   }
-
+  // Re-apply highlight after re-render (resize etc.)
+  if (selectedFips) {
+    const s = svg.querySelector<SVGPathElement>(
+      `.state[data-fips="${selectedFips}"]`
+    );
+    if (s) s.classList.add("state--selected");
+  }
   render();
   addEventListener("resize", render);
 }
