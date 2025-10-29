@@ -49,46 +49,6 @@
   },
   "income": [
     {
-      "state": "CA",
-      "year": 2025,
-      "has_income_tax": true,
-      "standard_deduction": 5202,
-      "flat": null,
-      "brackets": [
-        { "up_to": 10000, "rate": 0.01 },
-        { "up_to": 40000, "rate": 0.02 },
-        { "up_to": null, "rate": 0.093 }
-      ]
-    },
-    {
-      "state": "TX",
-      "year": 2025,
-      "has_income_tax": false,
-      "standard_deduction": null,
-      "flat": null,
-      "brackets": null
-    },
-    {
-      "state": "NJ",
-      "year": 2025,
-      "has_income_tax": true,
-      "standard_deduction": 1000,
-      "flat": null,
-      "brackets": [
-        { "up_to": 20000, "rate": 0.014 },
-        { "up_to": 75000, "rate": 0.0175 },
-        { "up_to": null, "rate": 0.0637 }
-      ]
-    },
-    {
-      "state": "AL",
-      "year": 2025,
-      "has_income_tax": false,
-      "standard_deduction": null,
-      "flat": null,
-      "brackets": null
-    },
-    {
       "state": "AK",
       "year": 2025,
       "has_income_tax": false,
@@ -97,7 +57,7 @@
       "brackets": null
     },
     {
-      "state": "AZ",
+      "state": "AL",
       "year": 2025,
       "has_income_tax": false,
       "standard_deduction": null,
@@ -111,6 +71,35 @@
       "standard_deduction": null,
       "flat": null,
       "brackets": null
+    },
+    {
+      "state": "AZ",
+      "year": 2025,
+      "has_income_tax": false,
+      "standard_deduction": null,
+      "flat": null,
+      "brackets": null
+    },
+    {
+      "state": "CA",
+      "year": 2025,
+      "has_income_tax": true,
+      "standard_deduction": 5202,
+      "flat": null,
+      "brackets": [
+        {
+          "up_to": 10000,
+          "rate": 0.01
+        },
+        {
+          "up_to": 40000,
+          "rate": 0.02
+        },
+        {
+          "up_to": null,
+          "rate": 0.093
+        }
+      ]
     },
     {
       "state": "CO",
@@ -129,7 +118,7 @@
       "brackets": null
     },
     {
-      "state": "DE",
+      "state": "DC",
       "year": 2025,
       "has_income_tax": true,
       "standard_deduction": null,
@@ -137,7 +126,7 @@
       "brackets": null
     },
     {
-      "state": "DC",
+      "state": "DE",
       "year": 2025,
       "has_income_tax": true,
       "standard_deduction": null,
@@ -169,6 +158,14 @@
       "brackets": null
     },
     {
+      "state": "IA",
+      "year": 2025,
+      "has_income_tax": true,
+      "standard_deduction": null,
+      "flat": null,
+      "brackets": null
+    },
+    {
       "state": "ID",
       "year": 2025,
       "has_income_tax": true,
@@ -186,14 +183,6 @@
     },
     {
       "state": "IN",
-      "year": 2025,
-      "has_income_tax": true,
-      "standard_deduction": null,
-      "flat": null,
-      "brackets": null
-    },
-    {
-      "state": "IA",
       "year": 2025,
       "has_income_tax": true,
       "standard_deduction": null,
@@ -225,7 +214,7 @@
       "brackets": null
     },
     {
-      "state": "ME",
+      "state": "MA",
       "year": 2025,
       "has_income_tax": true,
       "standard_deduction": null,
@@ -241,7 +230,7 @@
       "brackets": null
     },
     {
-      "state": "MA",
+      "state": "ME",
       "year": 2025,
       "has_income_tax": true,
       "standard_deduction": null,
@@ -265,14 +254,6 @@
       "brackets": null
     },
     {
-      "state": "MS",
-      "year": 2025,
-      "has_income_tax": true,
-      "standard_deduction": null,
-      "flat": null,
-      "brackets": null
-    },
-    {
       "state": "MO",
       "year": 2025,
       "has_income_tax": true,
@@ -281,47 +262,15 @@
       "brackets": null
     },
     {
+      "state": "MS",
+      "year": 2025,
+      "has_income_tax": true,
+      "standard_deduction": null,
+      "flat": null,
+      "brackets": null
+    },
+    {
       "state": "MT",
-      "year": 2025,
-      "has_income_tax": true,
-      "standard_deduction": null,
-      "flat": null,
-      "brackets": null
-    },
-    {
-      "state": "NE",
-      "year": 2025,
-      "has_income_tax": true,
-      "standard_deduction": null,
-      "flat": null,
-      "brackets": null
-    },
-    {
-      "state": "NV",
-      "year": 2025,
-      "has_income_tax": false,
-      "standard_deduction": null,
-      "flat": null,
-      "brackets": null
-    },
-    {
-      "state": "NH",
-      "year": 2025,
-      "has_income_tax": false,
-      "standard_deduction": null,
-      "flat": null,
-      "brackets": null
-    },
-    {
-      "state": "NM",
-      "year": 2025,
-      "has_income_tax": true,
-      "standard_deduction": null,
-      "flat": null,
-      "brackets": null
-    },
-    {
-      "state": "NY",
       "year": 2025,
       "has_income_tax": true,
       "standard_deduction": null,
@@ -338,6 +287,67 @@
     },
     {
       "state": "ND",
+      "year": 2025,
+      "has_income_tax": true,
+      "standard_deduction": null,
+      "flat": null,
+      "brackets": null
+    },
+    {
+      "state": "NE",
+      "year": 2025,
+      "has_income_tax": true,
+      "standard_deduction": null,
+      "flat": null,
+      "brackets": null
+    },
+    {
+      "state": "NH",
+      "year": 2025,
+      "has_income_tax": false,
+      "standard_deduction": null,
+      "flat": null,
+      "brackets": null
+    },
+    {
+      "state": "NJ",
+      "year": 2025,
+      "has_income_tax": true,
+      "standard_deduction": 1000,
+      "flat": null,
+      "brackets": [
+        {
+          "up_to": 20000,
+          "rate": 0.014
+        },
+        {
+          "up_to": 75000,
+          "rate": 0.0175
+        },
+        {
+          "up_to": null,
+          "rate": 0.0637
+        }
+      ]
+    },
+    {
+      "state": "NM",
+      "year": 2025,
+      "has_income_tax": true,
+      "standard_deduction": null,
+      "flat": null,
+      "brackets": null
+    },
+    {
+      "state": "NV",
+      "year": 2025,
+      "has_income_tax": false,
+      "standard_deduction": null,
+      "flat": null,
+      "brackets": null
+    },
+    {
+      "state": "NY",
       "year": 2025,
       "has_income_tax": true,
       "standard_deduction": null,
@@ -409,15 +419,15 @@
       "brackets": null
     },
     {
-      "state": "UT",
+      "state": "TX",
       "year": 2025,
-      "has_income_tax": true,
+      "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
       "brackets": null
     },
     {
-      "state": "VT",
+      "state": "UT",
       "year": 2025,
       "has_income_tax": true,
       "standard_deduction": null,
@@ -433,6 +443,14 @@
       "brackets": null
     },
     {
+      "state": "VT",
+      "year": 2025,
+      "has_income_tax": true,
+      "standard_deduction": null,
+      "flat": null,
+      "brackets": null
+    },
+    {
       "state": "WA",
       "year": 2025,
       "has_income_tax": false,
@@ -441,7 +459,7 @@
       "brackets": null
     },
     {
-      "state": "WV",
+      "state": "WI",
       "year": 2025,
       "has_income_tax": true,
       "standard_deduction": null,
@@ -449,7 +467,7 @@
       "brackets": null
     },
     {
-      "state": "WI",
+      "state": "WV",
       "year": 2025,
       "has_income_tax": true,
       "standard_deduction": null,
@@ -467,25 +485,11 @@
   ],
   "sales": [
     {
-      "state": "CA",
+      "state": "AK",
       "year": 2025,
-      "state_rate": 0.0625,
-      "avg_local_rate": 0.013,
-      "combined_rate": 0.0755
-    },
-    {
-      "state": "TX",
-      "year": 2025,
-      "state_rate": 0.0625,
-      "avg_local_rate": 0.019,
-      "combined_rate": 0.0815
-    },
-    {
-      "state": "NJ",
-      "year": 2025,
-      "state_rate": 0.06625,
-      "avg_local_rate": 0.0,
-      "combined_rate": 0.06625
+      "state_rate": 0,
+      "avg_local_rate": 0,
+      "combined_rate": 0
     },
     {
       "state": "AL",
@@ -495,7 +499,7 @@
       "combined_rate": 0
     },
     {
-      "state": "AK",
+      "state": "AR",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
@@ -509,11 +513,11 @@
       "combined_rate": 0
     },
     {
-      "state": "AR",
+      "state": "CA",
       "year": 2025,
-      "state_rate": 0,
-      "avg_local_rate": 0,
-      "combined_rate": 0
+      "state_rate": 0.0625,
+      "avg_local_rate": 0.013,
+      "combined_rate": 0.0755
     },
     {
       "state": "CO",
@@ -530,14 +534,14 @@
       "combined_rate": 0
     },
     {
-      "state": "DE",
+      "state": "DC",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
       "combined_rate": 0
     },
     {
-      "state": "DC",
+      "state": "DE",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
@@ -565,6 +569,13 @@
       "combined_rate": 0
     },
     {
+      "state": "IA",
+      "year": 2025,
+      "state_rate": 0,
+      "avg_local_rate": 0,
+      "combined_rate": 0
+    },
+    {
       "state": "ID",
       "year": 2025,
       "state_rate": 0,
@@ -580,13 +591,6 @@
     },
     {
       "state": "IN",
-      "year": 2025,
-      "state_rate": 0,
-      "avg_local_rate": 0,
-      "combined_rate": 0
-    },
-    {
-      "state": "IA",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
@@ -614,7 +618,7 @@
       "combined_rate": 0
     },
     {
-      "state": "ME",
+      "state": "MA",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
@@ -628,7 +632,7 @@
       "combined_rate": 0
     },
     {
-      "state": "MA",
+      "state": "ME",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
@@ -649,13 +653,6 @@
       "combined_rate": 0
     },
     {
-      "state": "MS",
-      "year": 2025,
-      "state_rate": 0,
-      "avg_local_rate": 0,
-      "combined_rate": 0
-    },
-    {
       "state": "MO",
       "year": 2025,
       "state_rate": 0,
@@ -663,42 +660,14 @@
       "combined_rate": 0
     },
     {
+      "state": "MS",
+      "year": 2025,
+      "state_rate": 0,
+      "avg_local_rate": 0,
+      "combined_rate": 0
+    },
+    {
       "state": "MT",
-      "year": 2025,
-      "state_rate": 0,
-      "avg_local_rate": 0,
-      "combined_rate": 0
-    },
-    {
-      "state": "NE",
-      "year": 2025,
-      "state_rate": 0,
-      "avg_local_rate": 0,
-      "combined_rate": 0
-    },
-    {
-      "state": "NV",
-      "year": 2025,
-      "state_rate": 0,
-      "avg_local_rate": 0,
-      "combined_rate": 0
-    },
-    {
-      "state": "NH",
-      "year": 2025,
-      "state_rate": 0,
-      "avg_local_rate": 0,
-      "combined_rate": 0
-    },
-    {
-      "state": "NM",
-      "year": 2025,
-      "state_rate": 0,
-      "avg_local_rate": 0,
-      "combined_rate": 0
-    },
-    {
-      "state": "NY",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
@@ -713,6 +682,48 @@
     },
     {
       "state": "ND",
+      "year": 2025,
+      "state_rate": 0,
+      "avg_local_rate": 0,
+      "combined_rate": 0
+    },
+    {
+      "state": "NE",
+      "year": 2025,
+      "state_rate": 0,
+      "avg_local_rate": 0,
+      "combined_rate": 0
+    },
+    {
+      "state": "NH",
+      "year": 2025,
+      "state_rate": 0,
+      "avg_local_rate": 0,
+      "combined_rate": 0
+    },
+    {
+      "state": "NJ",
+      "year": 2025,
+      "state_rate": 0.06625,
+      "avg_local_rate": 0,
+      "combined_rate": 0.06625
+    },
+    {
+      "state": "NM",
+      "year": 2025,
+      "state_rate": 0,
+      "avg_local_rate": 0,
+      "combined_rate": 0
+    },
+    {
+      "state": "NV",
+      "year": 2025,
+      "state_rate": 0,
+      "avg_local_rate": 0,
+      "combined_rate": 0
+    },
+    {
+      "state": "NY",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
@@ -775,14 +786,14 @@
       "combined_rate": 0
     },
     {
-      "state": "UT",
+      "state": "TX",
       "year": 2025,
-      "state_rate": 0,
-      "avg_local_rate": 0,
-      "combined_rate": 0
+      "state_rate": 0.0625,
+      "avg_local_rate": 0.019,
+      "combined_rate": 0.0815
     },
     {
-      "state": "VT",
+      "state": "UT",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
@@ -796,6 +807,13 @@
       "combined_rate": 0
     },
     {
+      "state": "VT",
+      "year": 2025,
+      "state_rate": 0,
+      "avg_local_rate": 0,
+      "combined_rate": 0
+    },
+    {
       "state": "WA",
       "year": 2025,
       "state_rate": 0,
@@ -803,14 +821,14 @@
       "combined_rate": 0
     },
     {
-      "state": "WV",
+      "state": "WI",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
       "combined_rate": 0
     },
     {
-      "state": "WI",
+      "state": "WV",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
@@ -826,22 +844,10 @@
   ],
   "property": [
     {
-      "state": "CA",
+      "state": "AK",
       "year": 2025,
-      "effective_rate": 0.0076,
-      "method": "ACS (tax/home value)"
-    },
-    {
-      "state": "TX",
-      "year": 2025,
-      "effective_rate": 0.0168,
-      "method": "ACS (tax/home value)"
-    },
-    {
-      "state": "NJ",
-      "year": 2025,
-      "effective_rate": 0.0219,
-      "method": "ACS (tax/home value)"
+      "effective_rate": 0,
+      "method": "placeholder"
     },
     {
       "state": "AL",
@@ -850,7 +856,7 @@
       "method": "placeholder"
     },
     {
-      "state": "AK",
+      "state": "AR",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
@@ -862,10 +868,10 @@
       "method": "placeholder"
     },
     {
-      "state": "AR",
+      "state": "CA",
       "year": 2025,
-      "effective_rate": 0,
-      "method": "placeholder"
+      "effective_rate": 0.0076,
+      "method": "ACS (tax/home value)"
     },
     {
       "state": "CO",
@@ -880,13 +886,13 @@
       "method": "placeholder"
     },
     {
-      "state": "DE",
+      "state": "DC",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
     },
     {
-      "state": "DC",
+      "state": "DE",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
@@ -910,6 +916,12 @@
       "method": "placeholder"
     },
     {
+      "state": "IA",
+      "year": 2025,
+      "effective_rate": 0,
+      "method": "placeholder"
+    },
+    {
       "state": "ID",
       "year": 2025,
       "effective_rate": 0,
@@ -923,12 +935,6 @@
     },
     {
       "state": "IN",
-      "year": 2025,
-      "effective_rate": 0,
-      "method": "placeholder"
-    },
-    {
-      "state": "IA",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
@@ -952,7 +958,7 @@
       "method": "placeholder"
     },
     {
-      "state": "ME",
+      "state": "MA",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
@@ -964,7 +970,7 @@
       "method": "placeholder"
     },
     {
-      "state": "MA",
+      "state": "ME",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
@@ -982,49 +988,19 @@
       "method": "placeholder"
     },
     {
-      "state": "MS",
-      "year": 2025,
-      "effective_rate": 0,
-      "method": "placeholder"
-    },
-    {
       "state": "MO",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
     },
     {
+      "state": "MS",
+      "year": 2025,
+      "effective_rate": 0,
+      "method": "placeholder"
+    },
+    {
       "state": "MT",
-      "year": 2025,
-      "effective_rate": 0,
-      "method": "placeholder"
-    },
-    {
-      "state": "NE",
-      "year": 2025,
-      "effective_rate": 0,
-      "method": "placeholder"
-    },
-    {
-      "state": "NV",
-      "year": 2025,
-      "effective_rate": 0,
-      "method": "placeholder"
-    },
-    {
-      "state": "NH",
-      "year": 2025,
-      "effective_rate": 0,
-      "method": "placeholder"
-    },
-    {
-      "state": "NM",
-      "year": 2025,
-      "effective_rate": 0,
-      "method": "placeholder"
-    },
-    {
-      "state": "NY",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
@@ -1037,6 +1013,42 @@
     },
     {
       "state": "ND",
+      "year": 2025,
+      "effective_rate": 0,
+      "method": "placeholder"
+    },
+    {
+      "state": "NE",
+      "year": 2025,
+      "effective_rate": 0,
+      "method": "placeholder"
+    },
+    {
+      "state": "NH",
+      "year": 2025,
+      "effective_rate": 0,
+      "method": "placeholder"
+    },
+    {
+      "state": "NJ",
+      "year": 2025,
+      "effective_rate": 0.0219,
+      "method": "ACS (tax/home value)"
+    },
+    {
+      "state": "NM",
+      "year": 2025,
+      "effective_rate": 0,
+      "method": "placeholder"
+    },
+    {
+      "state": "NV",
+      "year": 2025,
+      "effective_rate": 0,
+      "method": "placeholder"
+    },
+    {
+      "state": "NY",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
@@ -1090,13 +1102,13 @@
       "method": "placeholder"
     },
     {
-      "state": "UT",
+      "state": "TX",
       "year": 2025,
-      "effective_rate": 0,
-      "method": "placeholder"
+      "effective_rate": 0.0168,
+      "method": "ACS (tax/home value)"
     },
     {
-      "state": "VT",
+      "state": "UT",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
@@ -1108,19 +1120,25 @@
       "method": "placeholder"
     },
     {
+      "state": "VT",
+      "year": 2025,
+      "effective_rate": 0,
+      "method": "placeholder"
+    },
+    {
       "state": "WA",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
     },
     {
-      "state": "WV",
+      "state": "WI",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
     },
     {
-      "state": "WI",
+      "state": "WV",
       "year": 2025,
       "effective_rate": 0,
       "method": "placeholder"
@@ -1133,76 +1151,268 @@
     }
   ],
   "fuel": [
-    { "state": "CA", "year": 2025, "cents_per_gallon": 66.0 },
-    { "state": "TX", "year": 2025, "cents_per_gallon": 20.0 },
-    { "state": "NJ", "year": 2025, "cents_per_gallon": 42.4 },
-    { "state": "AL", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "AK", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "AZ", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "AR", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "CO", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "CT", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "DE", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "DC", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "FL", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "GA", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "HI", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "ID", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "IL", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "IN", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "IA", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "KS", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "KY", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "LA", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "ME", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "MD", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "MA", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "MI", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "MN", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "MS", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "MO", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "MT", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "NE", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "NV", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "NH", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "NM", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "NY", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "NC", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "ND", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "OH", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "OK", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "OR", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "PA", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "RI", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "SC", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "SD", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "TN", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "UT", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "VT", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "VA", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "WA", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "WV", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "WI", "year": 2025, "cents_per_gallon": 0 },
-    { "state": "WY", "year": 2025, "cents_per_gallon": 0 }
-  ],
-  "excise": [
+    {
+      "state": "AK",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "AL",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "AR",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "AZ",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
     {
       "state": "CA",
       "year": 2025,
-      "cigarette_per_pack": 2.87,
-      "alcohol_per_unit": 0.0
+      "cents_per_gallon": 66
     },
     {
-      "state": "TX",
+      "state": "CO",
       "year": 2025,
-      "cigarette_per_pack": 1.41,
-      "alcohol_per_unit": 0.0
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "CT",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "DC",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "DE",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "FL",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "GA",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "HI",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "IA",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "ID",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "IL",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "IN",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "KS",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "KY",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "LA",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "MA",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "MD",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "ME",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "MI",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "MN",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "MO",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "MS",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "MT",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "NC",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "ND",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "NE",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "NH",
+      "year": 2025,
+      "cents_per_gallon": 0
     },
     {
       "state": "NJ",
       "year": 2025,
-      "cigarette_per_pack": 2.7,
-      "alcohol_per_unit": 0.0
+      "cents_per_gallon": 42.4
+    },
+    {
+      "state": "NM",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "NV",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "NY",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "OH",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "OK",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "OR",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "PA",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "RI",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "SC",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "SD",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "TN",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "TX",
+      "year": 2025,
+      "cents_per_gallon": 20
+    },
+    {
+      "state": "UT",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "VA",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "VT",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "WA",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "WI",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "WV",
+      "year": 2025,
+      "cents_per_gallon": 0
+    },
+    {
+      "state": "WY",
+      "year": 2025,
+      "cents_per_gallon": 0
+    }
+  ],
+  "excise": [
+    {
+      "state": "AK",
+      "year": 2025,
+      "cigarette_per_pack": 0,
+      "alcohol_per_unit": 0
     },
     {
       "state": "AL",
@@ -1211,7 +1421,7 @@
       "alcohol_per_unit": 0
     },
     {
-      "state": "AK",
+      "state": "AR",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
@@ -1223,9 +1433,9 @@
       "alcohol_per_unit": 0
     },
     {
-      "state": "AR",
+      "state": "CA",
       "year": 2025,
-      "cigarette_per_pack": 0,
+      "cigarette_per_pack": 2.87,
       "alcohol_per_unit": 0
     },
     {
@@ -1241,13 +1451,13 @@
       "alcohol_per_unit": 0
     },
     {
-      "state": "DE",
+      "state": "DC",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
     },
     {
-      "state": "DC",
+      "state": "DE",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
@@ -1271,6 +1481,12 @@
       "alcohol_per_unit": 0
     },
     {
+      "state": "IA",
+      "year": 2025,
+      "cigarette_per_pack": 0,
+      "alcohol_per_unit": 0
+    },
+    {
       "state": "ID",
       "year": 2025,
       "cigarette_per_pack": 0,
@@ -1284,12 +1500,6 @@
     },
     {
       "state": "IN",
-      "year": 2025,
-      "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
-    },
-    {
-      "state": "IA",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
@@ -1313,7 +1523,7 @@
       "alcohol_per_unit": 0
     },
     {
-      "state": "ME",
+      "state": "MA",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
@@ -1325,7 +1535,7 @@
       "alcohol_per_unit": 0
     },
     {
-      "state": "MA",
+      "state": "ME",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
@@ -1343,49 +1553,19 @@
       "alcohol_per_unit": 0
     },
     {
-      "state": "MS",
-      "year": 2025,
-      "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
-    },
-    {
       "state": "MO",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
     },
     {
+      "state": "MS",
+      "year": 2025,
+      "cigarette_per_pack": 0,
+      "alcohol_per_unit": 0
+    },
+    {
       "state": "MT",
-      "year": 2025,
-      "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
-    },
-    {
-      "state": "NE",
-      "year": 2025,
-      "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
-    },
-    {
-      "state": "NV",
-      "year": 2025,
-      "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
-    },
-    {
-      "state": "NH",
-      "year": 2025,
-      "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
-    },
-    {
-      "state": "NM",
-      "year": 2025,
-      "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
-    },
-    {
-      "state": "NY",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
@@ -1398,6 +1578,42 @@
     },
     {
       "state": "ND",
+      "year": 2025,
+      "cigarette_per_pack": 0,
+      "alcohol_per_unit": 0
+    },
+    {
+      "state": "NE",
+      "year": 2025,
+      "cigarette_per_pack": 0,
+      "alcohol_per_unit": 0
+    },
+    {
+      "state": "NH",
+      "year": 2025,
+      "cigarette_per_pack": 0,
+      "alcohol_per_unit": 0
+    },
+    {
+      "state": "NJ",
+      "year": 2025,
+      "cigarette_per_pack": 2.7,
+      "alcohol_per_unit": 0
+    },
+    {
+      "state": "NM",
+      "year": 2025,
+      "cigarette_per_pack": 0,
+      "alcohol_per_unit": 0
+    },
+    {
+      "state": "NV",
+      "year": 2025,
+      "cigarette_per_pack": 0,
+      "alcohol_per_unit": 0
+    },
+    {
+      "state": "NY",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
@@ -1451,13 +1667,13 @@
       "alcohol_per_unit": 0
     },
     {
-      "state": "UT",
+      "state": "TX",
       "year": 2025,
-      "cigarette_per_pack": 0,
+      "cigarette_per_pack": 1.41,
       "alcohol_per_unit": 0
     },
     {
-      "state": "VT",
+      "state": "UT",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
@@ -1469,19 +1685,25 @@
       "alcohol_per_unit": 0
     },
     {
+      "state": "VT",
+      "year": 2025,
+      "cigarette_per_pack": 0,
+      "alcohol_per_unit": 0
+    },
+    {
       "state": "WA",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
     },
     {
-      "state": "WV",
+      "state": "WI",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
     },
     {
-      "state": "WI",
+      "state": "WV",
       "year": 2025,
       "cigarette_per_pack": 0,
       "alcohol_per_unit": 0
@@ -1496,36 +1718,94 @@
   "federal": {
     "year": 2025,
     "irs": {
-      "std_deduction": { "single": 15100, "married": 30200 },
+      "std_deduction": {
+        "single": 15100,
+        "married": 30200
+      },
       "brackets": {
         "single": [
-          { "up_to": 11000, "rate": 0.1 },
-          { "up_to": 44725, "rate": 0.12 },
-          { "up_to": 95375, "rate": 0.22 },
-          { "up_to": 182100, "rate": 0.24 },
-          { "up_to": 231250, "rate": 0.32 },
-          { "up_to": 578125, "rate": 0.35 },
-          { "up_to": null, "rate": 0.37 }
+          {
+            "up_to": 11000,
+            "rate": 0.1
+          },
+          {
+            "up_to": 44725,
+            "rate": 0.12
+          },
+          {
+            "up_to": 95375,
+            "rate": 0.22
+          },
+          {
+            "up_to": 182100,
+            "rate": 0.24
+          },
+          {
+            "up_to": 231250,
+            "rate": 0.32
+          },
+          {
+            "up_to": 578125,
+            "rate": 0.35
+          },
+          {
+            "up_to": null,
+            "rate": 0.37
+          }
         ],
         "married": [
-          { "up_to": 22000, "rate": 0.1 },
-          { "up_to": 89450, "rate": 0.12 },
-          { "up_to": 190750, "rate": 0.22 },
-          { "up_to": 364200, "rate": 0.24 },
-          { "up_to": 462500, "rate": 0.32 },
-          { "up_to": 693750, "rate": 0.35 },
-          { "up_to": null, "rate": 0.37 }
+          {
+            "up_to": 22000,
+            "rate": 0.1
+          },
+          {
+            "up_to": 89450,
+            "rate": 0.12
+          },
+          {
+            "up_to": 190750,
+            "rate": 0.22
+          },
+          {
+            "up_to": 364200,
+            "rate": 0.24
+          },
+          {
+            "up_to": 462500,
+            "rate": 0.32
+          },
+          {
+            "up_to": 693750,
+            "rate": 0.35
+          },
+          {
+            "up_to": null,
+            "rate": 0.37
+          }
         ]
       },
       "ltcg_thresholds": {
-        "single": [0, 44725, 492300],
-        "married": [0, 89450, 553850]
+        "single": [
+          0,
+          44725,
+          492300
+        ],
+        "married": [
+          0,
+          89450,
+          553850
+        ]
       }
     },
-    "ssa": { "wage_base": 176100 },
+    "ssa": {
+      "wage_base": 176100
+    },
     "medicare": {
       "rate": 0.0145,
-      "surtax_threshold": { "single": 200000, "married": 250000 }
+      "surtax_threshold": {
+        "single": 200000,
+        "married": 250000
+      }
     }
   },
   "context": [
@@ -1547,7 +1827,7 @@
       "state": "NJ",
       "year": 2024,
       "acs_median_income": 97000,
-      "bea_rpp": 113.0,
+      "bea_rpp": 113,
       "bls_unemp_rate": 4.7
     }
   ]

@@ -9,16 +9,18 @@
   </select>
 
   <div class="label"><span>Income ($)</span></div>
-  <input id="inc" type="text" value="60000" aria-label="Income in dollars" />
+  <input id="inc" type="text" inputmode="numeric" pattern="[0-9,]*" value="60000" aria-label="Income in dollars" />
+
 
   <div class="label"><span>Homeowner?</span></div>
-  <select id="ho" aria-label="Homeowner">
-    <option value="1" selected>Yes</option>
-    <option value="0">No (renter)</option>
-  </select>
+<div class="segmented" data-for="ho"></div>
+<select id="ho" aria-label="Homeowner">
+  <option value="1" selected>Yes</option>
+  <option value="0">No (renter)</option>
+</select>
 
   <div class="label"><span>Home value ($)</span></div>
-  <input id="hv" type="text" value="300000" aria-label="Home value in dollars" />
+  <input id="hv" type="text" inputmode="numeric" pattern="[0-9,]*" value="300000" aria-label="Home value in dollars" />
 
   <div class="grid">
     <div>
@@ -61,10 +63,11 @@
     <div class="grid">
       <div>
         <div class="label"><span>Include federal?</span></div>
-        <select id="fed" aria-label="Include federal taxes">
-          <option value="0" selected>No</option>
-          <option value="1">Yes</option>
-        </select>
+<div class="segmented" data-for="fed"></div>
+<select id="fed" aria-label="Include federal">
+  <option value="1">Yes</option>
+  <option value="0" selected>No</option>
+</select>
       </div>
       <div>
         <div class="label"><span>Long-term cap gains ($)</span></div>
@@ -75,117 +78,121 @@
 </form>
 
 <script type="module">
-  // document.currentScript is null when this module is executed as a JS module
-  // (type="module"), so fall back to querying the form by its aria label.
-  const root = (document.currentScript && document.currentScript.parentElement) || document.querySelector('form[aria-label="Tax inputs"]');
+/* Inputs client: live format, instant emit, segmented toggles */
+(function () {
+  const $ = (id) => document.getElementById(id);
 
-  const q = (id) => root.querySelector('#'+id);
+  // ---- State (kept simple and flat) ----------------------------------------
   const state = {
-    filingStatus: 'single',
-    income: 60000,
-    homeowner: true,
-    homeValue: 300000,
-    miles: 12000,
-    mpg: 28,
-    spendingShare: 0.60,
-    taxableShare: 0.55,
-    cigPacksPerWeek: 0,
-    alcoholUnitsPerWeek: 0,
-    includeFederal: false,
-    ltcg: 0
+    filingStatus: $('fs')?.value || 'single',
+    income:  parseNum($('inc')?.value),
+    homeowner: ($('ho')?.value === '1'),
+    homeValue: parseNum($('hv')?.value),
+    miles: +($('mi')?.value || 0),
+    mpg:   +($('mpg')?.value || 1),
+    spendingShare: +($('ss')?.value || 0.60),
+    taxableShare:  +($('ts')?.value || 0.55),
+    cigPacksPerWeek: +($('cig')?.value || 0),
+    alcoholUnitsPerWeek: +($('alc')?.value || 0),
+    includeFederal: ($('fed')?.value === '1'),
+    ltcg: parseNum($('ltcg')?.value || '0'),
   };
 
-  const fmtPct = (x)=> (x*100|0) + '%';
-  const parseNum = (v) => {
+  // ---- Helpers --------------------------------------------------------------
+  function emit() {
+    window.dispatchEvent(new CustomEvent('t1:inputs', { detail: { ...state } }));
+  }
+  function parseNum(v) {
     if (v == null) return 0;
-    try { return Number(String(v).replace(/[^0-9.\-]/g, '')) || 0; } catch (e) { return 0; }
-  };
-  const fmtNum = (n) => {
-    try { return (new Intl.NumberFormat()).format(Math.round(n)); } catch (e) { return String(n); }
-  };
-  // Live-format an input element with commas while preserving caret position
-  function attachLiveFormatter(el) {
-    if (!el) return;
-    el.addEventListener('input', (ev) => {
-      const cur = ev.target;
-      const raw = String(cur.value || '');
-      // count digits before caret
-      const selStart = cur.selectionStart || raw.length;
-      const digitsBefore = (raw.slice(0, selStart).match(/\d/g) || []).length;
-      // produce formatted string from digits only
-      const digits = raw.replace(/\D/g, '') || '0';
-      const formatted = (new Intl.NumberFormat()).format(Number(digits));
-      cur.value = formatted;
-      // set caret to position correlated with digitsBefore
-      let pos = 0, seen = 0;
-      for (let i = 0; i < formatted.length; i++) {
-        if (/[0-9]/.test(formatted[i])) seen++;
-        pos = i + 1;
-        if (seen >= digitsBefore) break;
+    return Number(String(v).replace(/[^0-9.-]/g, '')) || 0;
+  }
+  const nf = new Intl.NumberFormat();
+  function fmtNum(n){ return nf.format(n|0); }
+
+  // Preserve caret while formatting
+  function attachLiveFormatter(inputEl) {
+    if (!inputEl) return;
+    inputEl.addEventListener('input', (e) => {
+      const el = e.target;
+      const start = el.selectionStart;
+      const before = el.value.slice(0, start);
+      const offsetDigits = (before.match(/[0-9]/g) || []).length;
+
+      // Reformat
+      const raw = parseNum(el.value);
+      el.value = raw ? fmtNum(raw) : '';
+
+      // Restore caret by counting digits again
+      let seen = 0, pos = 0;
+      while (pos < el.value.length && seen < offsetDigits) {
+        if (/[0-9]/.test(el.value[pos])) seen++;
+        pos++;
       }
-      try { cur.setSelectionRange(pos, pos); } catch (e) {}
+      el.setSelectionRange(pos, pos);
     });
   }
-  const emit = () => window.dispatchEvent(new CustomEvent('t1:inputs', { detail: { ...state } }));
 
-  q('fs').addEventListener('change', (e)=>{ state.filingStatus = e.target.value; emit(); });
-  // Number inputs: only emit on change/blur or when the user presses Enter.
-  const incEl = q('inc');
-  if (incEl) {
-    incEl.addEventListener('change',  (e)=>{ state.income = parseNum(e.target.value); e.target.value = fmtNum(state.income); emit(); });
-    incEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { state.income = parseNum(e.target.value); e.target.value = fmtNum(state.income); emit(); e.target.blur(); } });
-    incEl.addEventListener('focus', (e)=>{ e.target.value = String(parseNum(e.target.value) || '') });
-    // format initial
-    incEl.value = fmtNum(state.income);
-    attachLiveFormatter(incEl);
-  }
-  q('ho').addEventListener('change',  (e)=>{ state.homeowner = e.target.value === '1'; emit(); });
-  const hvEl = q('hv');
-  if (hvEl) {
-    hvEl.addEventListener('change',   (e)=>{ state.homeValue = parseNum(e.target.value); e.target.value = fmtNum(state.homeValue); emit(); });
-    hvEl.addEventListener('keydown',  (e)=>{ if (e.key === 'Enter') { state.homeValue = parseNum(e.target.value); e.target.value = fmtNum(state.homeValue); emit(); e.target.blur(); } });
-    hvEl.addEventListener('focus', (e)=>{ e.target.value = String(parseNum(e.target.value) || '') });
-    hvEl.value = fmtNum(state.homeValue);
-    attachLiveFormatter(hvEl);
-  }
-  const miEl = q('mi');
-  if (miEl) {
-    miEl.addEventListener('change',   (e)=>{ state.miles = parseNum(e.target.value); e.target.value = fmtNum(state.miles); emit(); });
-    miEl.addEventListener('keydown',  (e)=>{ if (e.key === 'Enter') { state.miles = parseNum(e.target.value); e.target.value = fmtNum(state.miles); emit(); e.target.blur(); } });
-    miEl.addEventListener('focus', (e)=>{ e.target.value = String(parseNum(e.target.value) || '') });
-    miEl.value = fmtNum(state.miles);
-    attachLiveFormatter(miEl);
-  }
-  const mpgEl = q('mpg');
-  if (mpgEl) {
-    mpgEl.addEventListener('change',  (e)=>{ state.mpg = parseNum(e.target.value) || 1; e.target.value = fmtNum(state.mpg); emit(); });
-    mpgEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { state.mpg = parseNum(e.target.value) || 1; e.target.value = fmtNum(state.mpg); emit(); e.target.blur(); } });
-    mpgEl.addEventListener('focus', (e)=>{ e.target.value = String(parseNum(e.target.value) || '') });
-    mpgEl.value = fmtNum(state.mpg);
-    attachLiveFormatter(mpgEl);
+  // ---- Segmented toggle enhancement (hides original <select>) --------------
+  function enhanceSegmented(container) {
+    if (!container) return;
+    const selectId = container.getAttribute('data-for');
+    const sel = $(selectId);
+    if (!sel) return;
+
+    container.setAttribute('data-enhanced', '1');
+    container.innerHTML = `
+      <div role="group" class="seg-buttons">
+        <button type="button" data-val="1" aria-pressed="${sel.value==='1'}">Yes</button>
+        <button type="button" data-val="0" aria-pressed="${sel.value==='0'}">No</button>
+      </div>
+    `;
+
+    container.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button[data-val]');
+      if (!btn) return;
+      const v = btn.getAttribute('data-val');
+      sel.value = v;
+      // update aria-pressed
+      container.querySelectorAll('button[data-val]').forEach(b => {
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+      });
+      // push into state + emit
+      if (selectId === 'ho') state.homeowner = (v === '1');
+      if (selectId === 'fed') state.includeFederal = (v === '1');
+      emit();
+    });
   }
 
-  const ss = q('ss'), ts = q('ts');
-  const ssb = q('ssb'), tsb = q('tsb');
-  // Ranges are live and should emit on input for immediate feedback
-  ss.addEventListener('input', (e)=>{ state.spendingShare = +e.target.value; ssb.textContent = fmtPct(state.spendingShare); emit(); });
-  ts.addEventListener('input', (e)=>{ state.taxableShare  = +e.target.value; tsb.textContent = fmtPct(state.taxableShare); emit(); });
+  // ---- Wire up events (instant update on input) ----------------------------
+  $('fs')?.addEventListener('change', e => { state.filingStatus = e.target.value; emit(); });
 
-  // Optional excise numeric inputs: change/Enter/blur to commit
-  q('cig').addEventListener('change',  (e)=>{ state.cigPacksPerWeek = parseNum(e.target.value) || 0; emit(); });
-  q('cig').addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { state.cigPacksPerWeek = parseNum(e.target.value) || 0; emit(); e.target.blur(); } });
-  q('alc').addEventListener('change',  (e)=>{ state.alcoholUnitsPerWeek = parseNum(e.target.value) || 0; emit(); });
-  q('alc').addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { state.alcoholUnitsPerWeek = parseNum(e.target.value) || 0; emit(); e.target.blur(); } });
-  q('fed').addEventListener('change', (e)=>{ state.includeFederal = e.target.value === '1'; emit(); });
-  const ltcgEl = q('ltcg');
-  if (ltcgEl) {
-    ltcgEl.addEventListener('change', (e)=>{ state.ltcg = parseNum(e.target.value) || 0; e.target.value = fmtNum(state.ltcg); emit(); });
-    ltcgEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { state.ltcg = parseNum(e.target.value) || 0; e.target.value = fmtNum(state.ltcg); emit(); e.target.blur(); } });
-    ltcgEl.addEventListener('focus', (e)=>{ e.target.value = String(parseNum(e.target.value) || '') });
-    ltcgEl.value = fmtNum(state.ltcg);
-    attachLiveFormatter(ltcgEl);
-  }
+  const incEl = $('inc');   attachLiveFormatter(incEl);
+  incEl?.addEventListener('input',  e => { state.income = parseNum(e.target.value); emit(); });
 
-  // initial render
+  const hvEl  = $('hv');    attachLiveFormatter(hvEl);
+  hvEl?.addEventListener('input',   e => { state.homeValue = parseNum(e.target.value); emit(); });
+
+  $('mi')?.addEventListener('input',  e => { state.miles = +e.target.value || 0; emit(); });
+  $('mpg')?.addEventListener('input', e => { state.mpg   = +e.target.value || 1; emit(); });
+
+  $('ss')?.addEventListener('input',  e => { state.spendingShare = +e.target.value; emit(); });
+  $('ts')?.addEventListener('input',  e => { state.taxableShare  = +e.target.value; emit(); });
+
+  $('cig')?.addEventListener('input', e => { state.cigPacksPerWeek = +e.target.value || 0; emit(); });
+  $('alc')?.addEventListener('input', e => { state.alcoholUnitsPerWeek = +e.target.value || 0; emit(); });
+
+  $('fed')?.addEventListener('change', e => { state.includeFederal = (e.target.value === '1'); emit(); });
+  const ltcgEl = $('ltcg'); attachLiveFormatter(ltcgEl);
+  ltcgEl?.addEventListener('input', e => { state.ltcg = parseNum(e.target.value); emit(); });
+
+  // Enhance Yes/No segmented controls and hide the selects
+  document.querySelectorAll('.segmented[data-for]').forEach(enhanceSegmented);
+
+  // First paint
+  // (normalize displayed text values to include commas)
+  if (incEl) incEl.value = fmtNum(state.income);
+  if (hvEl)  hvEl.value  = fmtNum(state.homeValue);
+  if (ltcgEl)ltcgEl.value= fmtNum(state.ltcg);
   emit();
+})();
 </script>

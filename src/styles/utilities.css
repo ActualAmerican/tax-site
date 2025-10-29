@@ -242,3 +242,119 @@ button {
   paint-order: stroke fill markers;
   stroke-linecap: round;
 }
+
+/* Segmented toggle (button group) */
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.segmented .seg {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--ui-border, #2c2f36);
+  background: var(--panel, #121418);
+  color: var(--text, #d6dae3);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  transition: transform 120ms ease, background 120ms ease,
+    border-color 120ms ease;
+}
+.segmented .seg:hover {
+  transform: translateY(-1px);
+}
+.segmented .seg.on {
+  background: var(--accent-700, #213147);
+  border-color: var(--accent-500, #335a94);
+}
+
+/* Segmented Yes/No toggles */
+.segmented[data-enhanced="1"] + select {
+  display: none;
+}
+.segmented .seg-buttons {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+.segmented .seg-buttons > button {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--surface-3);
+  background: var(--surface-2);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+.segmented .seg-buttons > button[aria-pressed="true"] {
+  background: var(--accent-1);
+  color: var(--text-on-accent);
+  border-color: var(--accent-2);
+}
+
+/* Section headers that feel interactive (optional) */
+.label > span {
+  color: var(--muted-1);
+}
+
+/* --- Collapsible sections (details/summary) --- */
+details > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.4rem 0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+details > summary::marker {
+  display: none;
+}
+
+details > summary::after {
+  content: "▾";
+  margin-left: auto;
+  transition: transform 0.15s ease;
+  color: var(--muted);
+}
+details[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+details[open] > div {
+  margin-top: 0.4rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--border);
+}
+
+/* Hide the native selects once the segmented control is built */
+.segmented[data-enhanced="1"] + select {
+  display: none;
+}
+
+/* --- Grouped Breakdown table polish --- */
+.table-full th,
+.table-full td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-full thead th {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.table-full tbody tr:nth-child(odd) td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.table-full tr.group th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-full tfoot th {
+  border-top: 2px solid var(--border);
+  font-weight: 700;
+}

@@ -77,26 +77,54 @@ const slot = compareSlot ?? 'solo';
       return null;
     }
 
-    // Keep the latest input state so we can compute a demo breakdown client-side
     let latestInputs = {
-      income: 60000,
-      homeValue: 300000,
-      homeowner: true
-    };
+  filingStatus: 'single',
+  income: 60000,
+  homeowner: true,
+  homeValue: 300000,
+  miles: 12000,
+  mpg: 28,
+  spendingShare: 0.60,
+  taxableShare: 0.55,
+  includeFederal: false,
+  ltcg: 0
+};
 
-    function renderBreakdownRows(rows) {
-      const tbody = root.querySelector('tbody');
-      if (!tbody) return;
-      tbody.innerHTML = '';
-      for (const r of rows) {
-        const tr = document.createElement('tr');
-        const tdCat = document.createElement('td'); tdCat.textContent = r.label;
-        const tdAmt = document.createElement('td'); tdAmt.className = 'text-right'; tdAmt.textContent = r.amount;
-        const tdPct = document.createElement('td'); tdPct.className = 'text-right'; tdPct.textContent = r.pct;
-        tr.appendChild(tdCat); tr.appendChild(tdAmt); tr.appendChild(tdPct);
-        tbody.appendChild(tr);
-      }
-    }
+    function renderBreakdownRows(stateRows, federalRows, total) {
+  const tbody = root.querySelector('tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  // group header row factory
+  const addGroupHeader = (label) => {
+    const tr = document.createElement('tr');
+    tr.className = 'group';
+    const th = document.createElement('th');
+    th.colSpan = 3;
+    th.textContent = label;
+    tr.appendChild(th);
+    tbody.appendChild(tr);
+  };
+
+  // row factory
+  const addRow = (r) => {
+    const tr = document.createElement('tr');
+    const tdCat = document.createElement('td'); tdCat.textContent = r.label;
+    const tdAmt = document.createElement('td'); tdAmt.className = 'text-right'; tdAmt.textContent = r.amount;
+    const tdPct = document.createElement('td'); tdPct.className = 'text-right'; tdPct.textContent = r.pct;
+    tr.appendChild(tdCat); tr.appendChild(tdAmt); tr.appendChild(tdPct);
+    tbody.appendChild(tr);
+  };
+
+  if (stateRows.length) {
+    addGroupHeader('State taxes');
+    stateRows.forEach(addRow);
+  }
+  if (federalRows.length) {
+    addGroupHeader('Federal taxes');
+    federalRows.forEach(addRow);
+  }
+}
 
     // Cache pack data to avoid refetching
     let _packCache = null;
@@ -119,72 +147,193 @@ const slot = compareSlot ?? 'solo';
       return (arr.find(r => String(r.state).toUpperCase() === String(state).toUpperCase()) || null);
     }
 
-    async function computeDemoBreakdown(code) {
-      const inc = Number(latestInputs.income) || 0;
-      const hv = Number(latestInputs.homeValue) || 0;
-      const home = !!latestInputs.homeowner;
+function isStub(r, kind) {
+  if (!r) return true;
+  if (r.__stub === true || r.stub === true) return true;
+  // Heuristics per metric: consider "missing" if essential fields aren’t present
+  if (kind === 'income') {
+    if (r.has_income_tax === false) return true;
+    const hasBrackets = Array.isArray(r.brackets) && r.brackets.length > 0;
+    const hasFlat = typeof r.flat === 'number';
+    return !(hasBrackets || hasFlat);
+  }
+  if (kind === 'sales') {
+    return !(typeof r.combined_rate === 'number');
+  }
+  if (kind === 'property') {
+    return !(typeof r.effective_rate === 'number');
+  }
+  return false;
+}
 
-      const pack = await loadPack();
-      // Income tax calculation (replicates src/lib/calc/income.ts basic logic)
-      let incomeTax = 0;
-      if (pack && pack.income) {
-        const row = findRow(pack.income, code);
-        if (row && row.has_income_tax) {
-          const std = row.standard_deduction || 0;
-          const taxable = Math.max(0, inc - std);
-          if (row.flat != null) incomeTax = Math.round(taxable * row.flat);
-          else {
-            const brackets = row.brackets || [];
-            let prev = 0;
-            for (const b of brackets) {
-              const cap = (b.up_to == null) ? taxable : b.up_to;
-              const slice = Math.max(0, Math.min(taxable, cap) - prev);
-              incomeTax += Math.round(slice * b.rate);
-              prev = cap;
-              if (prev >= taxable) break;
-            }
-          }
-        }
-      } else {
-        // fallback reasonable estimate
-        incomeTax = Math.round(inc * 0.06);
-      }
+function computeFederalTotals(pack, inputs) {
+  const fed = pack && pack.federal ? pack.federal : null;
+  const fs  = (inputs.filingStatus || 'single').toLowerCase();
+  const inc = Number(inputs.income) || 0;
+  const ltcg = Number(inputs.ltcg) || 0;
 
-      // Sales tax: approximate as spendingShare * income * combined_rate
-      let salesTax = 0;
-      if (pack && pack.sales) {
-        const srow = findRow(pack.sales, code);
-        const rate = srow ? (srow.combined_rate || 0) : 0;
-        const spendingShare = Number(latestInputs.spendingShare) || 0.6;
-        salesTax = Math.round(inc * spendingShare * rate);
-      } else salesTax = Math.round(inc * 0.01);
-
-      // Property tax: homeValue * effective_rate
-      let propertyTax = 0;
-      if (pack && pack.property) {
-        const prow = findRow(pack.property, code);
-        const eff = prow ? (prow.effective_rate || 0) : 0;
-        propertyTax = Math.round(hv * eff);
-      } else propertyTax = home ? Math.round(hv * 0.004) : 0;
-
-      const total = incomeTax + salesTax + propertyTax;
-
-      const fmt = (v) => '$' + (v).toLocaleString();
-
-      const rows = [
-        { label: 'Income tax', amount: fmt(incomeTax), pct: ((incomeTax / (total || 1) * 100) || 0).toFixed(0) + '%' },
-        { label: 'Sales tax', amount: fmt(salesTax), pct: ((salesTax / (total || 1) * 100) || 0).toFixed(0) + '%' },
-        { label: 'Property tax', amount: fmt(propertyTax), pct: ((propertyTax / (total || 1) * 100) || 0).toFixed(0) + '%' }
-      ];
-
-      // Update totals row
-      const tot = root.querySelector('#tot');
-      const eff = root.querySelector('#eff');
-      if (tot) tot.textContent = '$' + total.toLocaleString();
-      if (eff) eff.textContent = ((total / Math.max(1, inc)) * 100).toFixed(1) + '%';
-
-      renderBreakdownRows(rows);
+  // Income tax via brackets
+  function taxFromBrackets(def, taxable, stdDedOverride) {
+    if (!def) return 0;
+    const std = stdDedOverride != null ? stdDedOverride : (def.standard_deduction || 0);
+    const base = Math.max(0, taxable - std);
+    let tax = 0, prev = 0;
+    const brackets = def.brackets || [];
+    for (const b of brackets) {
+      const cap = (b.up_to == null) ? base : b.up_to;
+      const slice = Math.max(0, Math.min(base, cap) - prev);
+      tax += slice * (b.rate || 0);
+      prev = cap;
+      if (prev >= base) break;
     }
+    return Math.round(tax);
+  }
+
+  const incomeDef = fed && fed.income && (fed.income[fs] || fed.income.single) || null;
+  const federalIncome = taxFromBrackets(incomeDef, inc);
+
+  // Payroll (employee share)
+  const pr = fed && fed.payroll || {};
+  const ssBase   = pr.ss_wage_base ?? 168600;
+  const ssRate   = pr.ss_rate ?? 0.062;
+  const mediRate = pr.medicare_rate ?? 0.0145;
+  const addRate  = pr.addl_medicare_rate ?? 0.009;
+  const addThreshMap = pr.addl_threshold || { single: 200000, married: 250000 };
+  const addThresh = addThreshMap[fs] ?? 200000;
+
+  const ss   = Math.min(inc, ssBase) * ssRate;
+  const medi = inc * mediRate + Math.max(0, inc - addThresh) * addRate;
+  const payroll = Math.round(ss + medi);
+
+  // LTCG
+  let ltcgTax = 0;
+  const cgDef = fed && fed.ltcg && (fed.ltcg[fs] || fed.ltcg.single) || null;
+  if (cgDef && ltcg > 0) {
+    let prev = 0;
+    const brackets = cgDef.brackets || [];
+    for (const b of brackets) {
+      const cap = (b.up_to == null) ? ltcg : b.up_to;
+      const slice = Math.max(0, Math.min(ltcg, cap) - prev);
+      ltcgTax += slice * (b.rate || 0);
+      prev = cap;
+      if (prev >= ltcg) break;
+    }
+    ltcgTax = Math.round(ltcgTax);
+  }
+
+  return { federalIncome, payroll, ltcgTax, total: federalIncome + payroll + ltcgTax };
+}
+
+    async function computeDemoBreakdown(code) {
+  const inc  = Number(latestInputs.income) || 0;
+  const hv   = Number(latestInputs.homeValue) || 0;
+  const home = !!latestInputs.homeowner;
+
+  const pack = await loadPack();
+
+  // ----- STATE CATEGORIES -----
+let stIncome = 0, stIncomeMissing = false;
+// Income tax (state)
+if (pack && pack.income) {
+  const row = findRow(pack.income, code);
+  if (!row || isStub(row, 'income')) {
+    stIncomeMissing = true;
+  } else if (row.has_income_tax) {
+    const std = row.standard_deduction || 0;
+    const taxable = Math.max(0, inc - std);
+    if (typeof row.flat === 'number') {
+      stIncome = Math.round(taxable * row.flat);
+    } else {
+      const brackets = row.brackets || [];
+      let prev = 0;
+      for (const b of brackets) {
+        const cap = (b.up_to == null) ? taxable : b.up_to;
+        const slice = Math.max(0, Math.min(taxable, cap) - prev);
+        stIncome += Math.round(slice * (b.rate || 0));
+        prev = cap;
+        if (prev >= taxable) break;
+      }
+    }
+  } else {
+    stIncomeMissing = true;
+  }
+} else {
+  stIncomeMissing = true;
+}
+
+let stSales = 0, stSalesMissing = false;
+// Sales tax
+if (pack && pack.sales) {
+  const srow = findRow(pack.sales, code);
+  if (!srow || isStub(srow, 'sales')) {
+    stSalesMissing = true;
+  } else {
+    const rate = srow.combined_rate || 0;
+    const spendingShare = Number(latestInputs.spendingShare) || 0.6;
+    stSales = Math.round(inc * spendingShare * rate);
+  }
+} else {
+  stSalesMissing = true;
+}
+
+let stProperty = 0, stPropertyMissing = false;
+// Property tax
+if (pack && pack.property) {
+  const prow = findRow(pack.property, code);
+  if (!prow || isStub(prow, 'property')) {
+    stPropertyMissing = true;
+  } else {
+    const eff = prow.effective_rate || 0;
+    stProperty = Math.round(hv * eff);
+  }
+} else {
+  stPropertyMissing = true;
+}
+
+  // ----- FEDERAL (optional) -----
+  let fedIncome = 0, fedPayroll = 0, fedLTCG = 0;
+  if (latestInputs.includeFederal) {
+    const f = computeFederalTotals(pack, latestInputs);
+    fedIncome  = f.federalIncome;
+    fedPayroll = f.payroll;
+    fedLTCG    = f.ltcgTax;
+  }
+
+  // Build grouped rows (null means “no data” → show em-dash)
+const stateNumeric = [
+  { label: 'Income tax',   value: stIncomeMissing   ? null : stIncome },
+  { label: 'Sales tax',    value: stSalesMissing    ? null : stSales },
+  { label: 'Property tax', value: stPropertyMissing ? null : stProperty },
+];
+
+const federalNumeric = [];
+if (latestInputs.includeFederal) {
+  federalNumeric.push({ label: 'Federal income',     value: fedIncome });
+  federalNumeric.push({ label: 'Payroll (employee)', value: fedPayroll });
+  if (fedLTCG > 0) federalNumeric.push({ label: 'LTCG', value: fedLTCG });
+}
+
+const total = [...stateNumeric, ...federalNumeric]
+  .reduce((a, r) => a + (r.value ?? 0), 0);
+
+const fmt = (v) => '$' + (Number(v || 0)).toLocaleString();
+
+const toDisplay = (arr) => arr.map(r => ({
+  label:  r.label,
+  amount: r.value == null ? '—' : fmt(r.value),
+  pct:    r.value == null ? '—' : ((r.value / Math.max(1, total)) * 100).toFixed(0) + '%'
+}));
+
+const stateDisplay   = toDisplay(stateNumeric);
+const federalDisplay = toDisplay(federalNumeric);
+
+const tot = root.querySelector('#tot');
+const eff = root.querySelector('#eff');
+if (tot) tot.textContent = fmt(total);
+if (eff) eff.textContent = ((total / Math.max(1, inc)) * 100).toFixed(1) + '%';
+
+renderBreakdownRows(stateDisplay, federalDisplay, total);
+}
 
     function updateState(val) {
       const code = normalizeStateCode(val);
@@ -197,15 +346,26 @@ const slot = compareSlot ?? 'solo';
       function _parseNum(v) { try { return Number(String(v).replace(/[^0-9.\-\.]/g, '')) || 0; } catch (e) { return 0; } }
       try {
         const form = document.querySelector('form[aria-label="Tax inputs"]');
-        if (form) {
-          const get = id => form.querySelector('#' + id);
-          const incEl = get('inc');
-          const hvEl = get('hv');
-          const hoEl = get('ho');
-          latestInputs.income = incEl ? _parseNum(incEl.value) : latestInputs.income;
-          latestInputs.homeValue = hvEl ? _parseNum(hvEl.value) : latestInputs.homeValue;
-          latestInputs.homeowner = hoEl ? (hoEl.value === '1') : latestInputs.homeowner;
-        }
+if (form) {
+  const get = id => form.querySelector('#' + id);
+  const incEl  = get('inc');
+  const hvEl   = get('hv');
+  const hoEl   = get('ho');
+  const fsEl   = get('fs');
+  const ssEl   = get('ss');
+  const tsEl   = get('ts');
+  const fedEl  = get('fed');
+  const ltcgEl = get('ltcg');
+
+  latestInputs.income        = incEl  ? _parseNum(incEl.value)  : latestInputs.income;
+  latestInputs.homeValue     = hvEl   ? _parseNum(hvEl.value)   : latestInputs.homeValue;
+  latestInputs.homeowner     = hoEl   ? (hoEl.value === '1')    : latestInputs.homeowner;
+  latestInputs.filingStatus  = fsEl   ? (fsEl.value || 'single') : latestInputs.filingStatus;
+  latestInputs.spendingShare = ssEl   ? (+ssEl.value)           : latestInputs.spendingShare;
+  latestInputs.taxableShare  = tsEl   ? (+tsEl.value)           : latestInputs.taxableShare;
+  latestInputs.includeFederal= fedEl  ? (fedEl.value === '1')   : latestInputs.includeFederal;
+  latestInputs.ltcg          = ltcgEl ? _parseNum(ltcgEl.value) : latestInputs.ltcg;
+}
       } catch (err) { /* ignore */ }
 
       if (!code) return;
@@ -228,17 +388,24 @@ const slot = compareSlot ?? 'solo';
 
     // Listen for input changes so breakdown can update live
     window.addEventListener('t1:inputs', (e) => {
-      try {
-        const d = e.detail || {};
-        try { console.log('Breakdown: received t1:inputs', d); } catch (e) {}
-        latestInputs.income = (d.income != null) ? d.income : latestInputs.income;
-        latestInputs.homeValue = (d.homeValue != null) ? d.homeValue : latestInputs.homeValue;
-        latestInputs.homeowner = (typeof d.homeowner === 'boolean') ? d.homeowner : latestInputs.homeowner;
-        // Recompute breakdown for current state
-        const cur = root.getAttribute('data-state') || stateLabel.textContent;
-        computeDemoBreakdown(cur);
-      } catch (err) { console.warn('Breakdown t1:inputs handler error', err); }
-    });
+  try {
+    const d = e.detail || {};
+    latestInputs.filingStatus   = d.filingStatus   ?? latestInputs.filingStatus;
+    latestInputs.income         = d.income         ?? latestInputs.income;
+    latestInputs.homeValue      = d.homeValue      ?? latestInputs.homeValue;
+    latestInputs.homeowner      = (typeof d.homeowner === 'boolean') ? d.homeowner : latestInputs.homeowner;
+    latestInputs.miles          = d.miles          ?? latestInputs.miles;
+    latestInputs.mpg            = d.mpg            ?? latestInputs.mpg;
+    latestInputs.spendingShare  = d.spendingShare  ?? latestInputs.spendingShare;
+    latestInputs.taxableShare   = d.taxableShare   ?? latestInputs.taxableShare;
+    latestInputs.includeFederal = (typeof d.includeFederal === 'boolean') ? d.includeFederal : latestInputs.includeFederal;
+    latestInputs.ltcg           = d.ltcg           ?? latestInputs.ltcg;
+
+    // Recompute breakdown for current state
+    const cur = root.getAttribute('data-state') || stateLabel.textContent;
+    computeDemoBreakdown(cur);
+  } catch (err) { console.warn('Breakdown t1:inputs handler error', err); }
+});
 
     // Compare slots (future)
     window.addEventListener('t1:state-left',  (e) => { if (slot === 'left')  updateState(e.detail); });
@@ -255,4 +422,10 @@ const slot = compareSlot ?? 'solo';
       updateState(state || fips);
     } catch {}
   })();
+  // Recompute when inputs change (even if the map selection stays the same)
+window.addEventListener('t1:inputs', () => {
+  // re-emit a local event most compute modules already listen for
+  document.querySelector('[data-t1-breakdown]')?.dispatchEvent(new CustomEvent('t1:recompute'));
+});
+
 </script>
