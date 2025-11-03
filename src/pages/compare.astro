@@ -2,7 +2,7 @@
 import '../styles/tokens.css';
 import '../styles/utilities.css';
 import Breakdown from '../components/Breakdown.astro';
-import pack from '../../data/packs/2025.1.0.json';
+import Modal from '../components/Modal.astro'; 
 
 const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const qp = new URL(Astro.request.url).searchParams;
@@ -11,51 +11,269 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
 ---
 
 <html lang="en">
-  <head><meta charset="utf-8" /><title>T1 — Compare States</title></head>
+  <head>
+    <meta charset="utf-8" />
+    <title>T1 — Compare States</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="description" content="Compare state tax burdens side-by-side with totals, effective rates, and category differences." />
+  </head>
   <body>
-    <main class="container grid-2">
-      <section class="panel stack">
-        <h2>Compare • Left</h2>
-        <label class="label" for="sel-left"><span>State</span></label>
-        <select id="sel-left">
-          {STATES.map(s => <option value={s} selected={s===leftDefault}>{s}</option>)}
-        </select>
-        <Breakdown initialState={leftDefault} compareSlot="left" />
+    <main class="container stack" style="gap:1.25rem">
+      <section class="panel stack" style="gap:.75rem">
+        <h1 class="heading--tight">Compare states</h1>
+
+        <div class="grid">
+          <div class="stack">
+            <label class="label" for="sel-left"><span>Left state</span></label>
+            <select id="sel-left">
+              {STATES.map(s => <option value={s} selected={s===leftDefault}>{s}</option>)}
+            </select>
+          </div>
+          <div class="stack">
+            <label class="label" for="sel-right"><span>Right state</span></label>
+            <select id="sel-right">
+              {STATES.map(s => <option value={s} selected={s===rightDefault}>{s}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <!-- Header toolbar + live mini-summary + swap -->
+        <div class="toolbar" style="justify-content:space-between">
+          <div class="stack--row">
+            <button id="copy-link" type="button" class="badge">Copy share link</button>
+            <a id="open-main" href="/" class="badge">Open main view</a>
+          </div>
+          <div class="stack--row">
+            <span class="badge">Left</span>
+            <span class="chip" id="sum-left-total">—</span>
+            <span class="chip" id="sum-left-eff">—</span>
+            <button id="swap" type="button" class="badge" title="Swap states">Swap ⇄</button>
+            <span class="badge">Right</span>
+            <span class="chip" id="sum-right-total">—</span>
+            <span class="chip" id="sum-right-eff">—</span>
+          </div>
+        </div>
+
+        <span id="share-status" class="muted-note" aria-live="polite"></span>
       </section>
 
+      <section class="container grid-2">
+        <section class="panel stack">
+          <h2>Left</h2>
+          <Breakdown initialState={leftDefault} compareSlot="left" />
+        </section>
+
+        <section class="panel stack">
+          <h2>Right</h2>
+          <Breakdown initialState={rightDefault} compareSlot="right" />
+        </section>
+      </section>
+
+      <!-- New: true side-by-side comparison table -->
       <section class="panel stack">
-        <h2>Compare • Right</h2>
-        <label class="label" for="sel-right"><span>State</span></label>
-        <select id="sel-right">
-          {STATES.map(s => <option value={s} selected={s===rightDefault}>{s}</option>)}
-        </select>
-        <Breakdown initialState={rightDefault} compareSlot="right" />
+        <h2>Side-by-side comparison</h2>
+        <table class="table-full" id="cmp-table" aria-live="polite">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th class="text-right">Left</th>
+              <th class="text-right">Right</th>
+              <th class="text-right">Δ</th>
+              <th class="text-right">Δ%</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="loading"><td colspan="5">Waiting for both sides…</td></tr>
+          </tbody>
+          <tfoot>
+            <tr class="subtotal">
+              <th>Total</th>
+              <th id="cmp-left-total" class="text-right">—</th>
+              <th id="cmp-right-total" class="text-right">—</th>
+              <th id="cmp-diff-total" class="text-right">—</th>
+              <th id="cmp-diffpct-total" class="text-right">—</th>
+            </tr>
+          </tfoot>
+        </table>
       </section>
     </main>
 
     <script type="module">
-      const left = document.querySelector('#sel-left');
-      const right = document.querySelector('#sel-right');
-      function pushParams(a,b){
-        const u = new URL(window.location.href);
-        u.searchParams.set('a', a);
-        u.searchParams.set('b', b);
-        window.history.replaceState({}, '', u.toString());
+      import {
+        currentURL,
+        readInputsFromURL,
+        buildCompareURL,
+        linkToMainWithInputs,
+        copyToClipboard,
+      } from "../lib/url/share.ts";
+
+      const $ = (sel, root=document) => root.querySelector(sel);
+
+      function getDefaults() {
+        const url = currentURL();
+        const qp = url.searchParams;
+        return { left: (qp.get('a') || 'CA').toUpperCase(), right: (qp.get('b') || 'TX').toUpperCase(), url };
       }
-      left.addEventListener('change', ()=>{
-        const v = left.value;
-        window.dispatchEvent(new CustomEvent('t1:state-left',  { detail: v }));
-        pushParams(v, right.value);
+
+      function emitInputsFromURL(u) {
+        const payload = readInputsFromURL(u);
+        queueMicrotask(() => {
+          window.dispatchEvent(new CustomEvent('t1:inputs', { detail: payload }));
+        });
+      }
+
+      // Maintain latest snapshots from both Breakdown panels
+      let snapL = null, snapR = null;
+
+      function money(n){ return '$' + (Number(n||0)).toLocaleString(); }
+      function pct(n){ return ((n||0) * 100).toFixed(1) + '%'; }
+
+      function unionKeys(a, b) {
+        const keys = new Map();
+        for (const r of (a||[])) keys.set(r.key, r.label);
+        for (const r of (b||[])) if (!keys.has(r.key)) keys.set(r.key, r.label);
+        // keep a nice order
+        const order = ['income','sales','property','fed_income','payroll','ltcg'];
+        return Array.from(keys.entries()).sort((x,y)=>{
+          const ix = order.indexOf(x[0]); const iy = order.indexOf(y[0]);
+          return (ix<0?99:ix) - (iy<0?99:iy);
+        });
+      }
+
+      function renderCompare() {
+        const tbody = $('#cmp-table tbody');
+        if (!tbody) return;
+        if (!snapL || !snapR) {
+          tbody.innerHTML = '<tr class="loading"><td colspan="5">Waiting for both sides…</td></tr>';
+          return;
+        }
+        // combine rows
+        const Ls = [...(snapL.rows.state||[]), ...(snapL.rows.federal||[])];
+        const Rs = [...(snapR.rows.state||[]), ...(snapR.rows.federal||[])];
+        const byKeyL = Object.fromEntries(Ls.map(r=>[r.key, r]));
+        const byKeyR = Object.fromEntries(Rs.map(r=>[r.key, r]));
+        const keys = unionKeys(Ls, Rs);
+
+        const rows = [];
+        for (const [key,label] of keys) {
+          const lv = byKeyL[key]?.value ?? 0;
+          const rv = byKeyR[key]?.value ?? 0;
+          const diff = rv - lv;
+          const diffPct = (lv === 0) ? null : (diff / lv);
+          rows.push({
+            label,
+            left:  lv ? money(lv) : '—',
+            right: rv ? money(rv) : '—',
+            diffClass: diff > 0 ? 'diff-neg' : (diff < 0 ? 'diff-pos' : 'muted'),
+            diff: (lv===0 && rv===0) ? '—' : money(diff),
+            diffPct: (diffPct==null) ? '—' : ((diffPct*100).toFixed(1)+'%')
+          });
+        }
+
+        tbody.innerHTML = rows.map(r => `
+          <tr>
+            <td>${r.label}</td>
+            <td class="text-right">${r.left}</td>
+            <td class="text-right">${r.right}</td>
+            <td class="text-right ${r.diffClass}">${r.diff}</td>
+            <td class="text-right ${r.diffClass}">${r.diffPct}</td>
+          </tr>
+        `).join('');
+
+        // totals row
+        const lt = snapL.totals.total || 0;
+        const rt = snapR.totals.total || 0;
+        const dt = rt - lt;
+        const dp = (lt === 0) ? null : (dt/lt);
+
+        $('#cmp-left-total')!.textContent = money(lt);
+        $('#cmp-right-total')!.textContent = money(rt);
+        const diffEl = $('#cmp-diff-total'); const diffPctEl = $('#cmp-diffpct-total');
+        if (diffEl)    { diffEl.textContent    = money(dt); diffEl.className = 'text-right ' + (dt>0?'diff-neg':(dt<0?'diff-pos':'')); }
+        if (diffPctEl) { diffPctEl.textContent = (dp==null? '—' : ((dp*100).toFixed(1)+'%'));
+                         diffPctEl.className = 'text-right ' + (dt>0?'diff-neg':(dt<0?'diff-pos':'')); }
+
+        // update mini summary chips in header
+        $('#sum-left-total')!.textContent  = money(lt);
+       $('#sum-left-eff')!.textContent    = pct(snapL.totals.effectiveRate);
+        $('#sum-right-total')!.textContent = money(rt);
+        $('#sum-right-eff')!.textContent   = pct(snapR.totals.effectiveRate);
+      }
+
+      // Keep snapshots updated whenever a Breakdown recomputes
+      document.addEventListener('t1:breakdown-computed', (e) => {
+        const d = e.detail || {};
+        if (d.slot === 'left')  snapL = d;
+        if (d.slot === 'right') snapR = d;
+        renderCompare();
       });
-      right.addEventListener('change',()=>{
-        const v = right.value;
-        window.dispatchEvent(new CustomEvent('t1:state-right', { detail: v }));
-        pushParams(left.value, v);
+
+      // Wiring for selectors + navigation
+      function syncAll({ pushHistory = false } = {}) {
+        const u = currentURL();
+        const leftSel  = $('#sel-left');
+        const rightSel = $('#sel-right');
+        const left  = (leftSel?.value || 'CA').toUpperCase();
+        const right = (rightSel?.value || 'TX').toUpperCase();
+
+        const nu = buildCompareURL(left, right, u);
+        if (pushHistory) history.replaceState({}, '', nu);
+
+        const mainURL = linkToMainWithInputs(left, nu);
+        const openMain = $('#open-main'); if (openMain) openMain.href = mainURL.toString();
+
+        window.dispatchEvent(new CustomEvent('t1:state-left',  { detail: left  }));
+        window.dispatchEvent(new CustomEvent('t1:state-right', { detail: right }));
+      }
+
+      const leftSel  = $('#sel-left');
+      const rightSel = $('#sel-right');
+      const copyBtn  = $('#copy-link');
+      const statusEl = $('#share-status');
+      const swapBtn  = $('#swap');
+
+      leftSel?.addEventListener('change', () => { syncAll({ pushHistory: true }); });
+      rightSel?.addEventListener('change', () => { syncAll({ pushHistory: true }); });
+
+      swapBtn?.addEventListener('click', () => {
+        if (leftSel && rightSel) {
+          const tmp = leftSel.value;
+          leftSel.value = rightSel.value;
+          rightSel.value = tmp;
+          syncAll({ pushHistory: true });
+        }
       });
-      // fire initial events so both panels compute if needed and sync URL
-      window.dispatchEvent(new CustomEvent('t1:state-left',  { detail: left.value }));
-      window.dispatchEvent(new CustomEvent('t1:state-right', { detail: right.value }));
-      pushParams(left.value, right.value);
+
+      async function copyShare() {
+        const ok = await copyToClipboard(currentURL().toString());
+        if (statusEl) {
+          statusEl.textContent = ok ? 'Link copied!' : 'Copy failed';
+          setTimeout(() => (statusEl.textContent = ''), 1800);
+        }
+      }
+      copyBtn?.addEventListener('click', copyShare);
+
+      window.addEventListener('popstate', () => {
+        const { left, right, url } = getDefaults();
+        if (leftSel)  leftSel.value  = left;
+        if (rightSel) rightSel.value = right;
+        emitInputsFromURL(url);
+        syncAll();
+      });
+
+      (function init() {
+        const { left, right, url } = getDefaults();
+        if (leftSel)  leftSel.value  = left;
+        if (rightSel) rightSel.value = right;
+        emitInputsFromURL(url);
+        syncAll({ pushHistory: true });
+      })();
+
+      // Also re-render compare if inputs change (totals will change)
+      window.addEventListener('t1:inputs', () => { /* snapshots update via events */ });
     </script>
+        <Modal />
+  </body>
+</html>
   </body>
 </html>

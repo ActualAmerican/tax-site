@@ -21,26 +21,27 @@
 
   <div class="label"><span>Home value ($)</span></div>
   <input id="hv" type="text" inputmode="numeric" pattern="[0-9,]*" value="300000" aria-label="Home value in dollars" />
+  <div class="muted-note">Used to estimate annual property tax (statewide effective rate).</div>
 
-  <div class="grid">
+    <div class="grid">
     <div>
       <div class="label"><span>Miles/year</span></div>
-  <input id="mi" type="text" value="12000" aria-label="Miles driven per year" />
+      <input id="mi" type="text" inputmode="numeric" pattern="[0-9]*" value="12000" aria-label="Miles driven per year" />
     </div>
     <div>
       <div class="label"><span>MPG</span></div>
-  <input id="mpg" type="text" value="28" aria-label="Vehicle miles per gallon" />
+      <input id="mpg" type="text" inputmode="numeric" pattern="[0-9]*" value="28" aria-label="Vehicle miles per gallon" />
     </div>
   </div>
 
-  <div class="grid">
+    <div class="grid">
     <div>
-      <div class="label"><span>Spending share</span><span class="badge" id="ssb">60%</span></div>
-  <input id="ss" type="range" min="0.2" max="0.95" step="0.01" value="0.60" aria-label="Spending share" />
+      <div class="label"><span>Spending share</span><span class="badge" id="ssb" aria-live="polite">60%</span></div>
+      <input id="ss" type="range" min="0.2" max="0.95" step="0.01" value="0.60" aria-label="Spending share" />
     </div>
     <div>
-      <div class="label"><span>Taxable share</span><span class="badge" id="tsb">55%</span></div>
-  <input id="ts" type="range" min="0.2" max="0.95" step="0.01" value="0.55" aria-label="Taxable share" />
+      <div class="label"><span>Taxable share</span><span class="badge" id="tsb" aria-live="polite">55%</span></div>
+      <input id="ts" type="range" min="0.2" max="0.95" step="0.01" value="0.55" aria-label="Taxable share" />
     </div>
   </div>
 
@@ -61,17 +62,20 @@
   <details>
     <summary class="label">Federal options</summary>
     <div class="grid">
-      <div>
+            <div>
         <div class="label"><span>Include federal?</span></div>
-<div class="segmented" data-for="fed"></div>
-<select id="fed" aria-label="Include federal">
-  <option value="1">Yes</option>
-  <option value="0" selected>No</option>
-</select>
+        <div class="segmented" data-for="fed"></div>
+        <select id="fed" aria-label="Include federal">
+          <option value="1">Yes</option>
+          <option value="0" selected>No</option>
+        </select>
+        <div class="muted-note">Adds Federal income, payroll, and LTCG (if set) to the breakdown.</div>
       </div>
-      <div>
+
+            <div>
         <div class="label"><span>Long-term cap gains ($)</span></div>
-  <input id="ltcg" type="text" value="0" aria-label="Long-term capital gains" />
+        <input id="ltcg" type="text" value="0" aria-label="Long-term capital gains" />
+        <div class="muted-note">Only affects the “LTCG” row when “Include federal” is on.</div>
       </div>
     </div>
   </details>
@@ -82,26 +86,22 @@
 (function () {
   const $ = (id) => document.getElementById(id);
 
-  // ---- State (kept simple and flat) ----------------------------------------
-  const state = {
-    filingStatus: $('fs')?.value || 'single',
-    income:  parseNum($('inc')?.value),
-    homeowner: ($('ho')?.value === '1'),
-    homeValue: parseNum($('hv')?.value),
-    miles: +($('mi')?.value || 0),
-    mpg:   +($('mpg')?.value || 1),
-    spendingShare: +($('ss')?.value || 0.60),
-    taxableShare:  +($('ts')?.value || 0.55),
-    cigPacksPerWeek: +($('cig')?.value || 0),
-    alcoholUnitsPerWeek: +($('alc')?.value || 0),
-    includeFederal: ($('fed')?.value === '1'),
-    ltcg: parseNum($('ltcg')?.value || '0'),
-  };
-
-  // ---- Helpers --------------------------------------------------------------
-  function emit() {
-    window.dispatchEvent(new CustomEvent('t1:inputs', { detail: { ...state } }));
+  // ---- URL helpers ----------------------------------------------------------
+  function getURL() { try { return new URL(window.location.href); } catch { return null; } }
+  function readParam(name) {
+    const u = getURL(); if (!u) return null;
+    return u.searchParams.get(name);
   }
+  function writeParams(pairs) {
+    const u = getURL(); if (!u) return;
+    for (const [k, v] of pairs) {
+      if (v === null || v === undefined || v === '') u.searchParams.delete(k);
+      else u.searchParams.set(k, String(v));
+    }
+    history.replaceState({}, '', u);
+  }
+
+  // ---- Number formatting + caret-preserving parser --------------------------
   function parseNum(v) {
     if (v == null) return 0;
     return Number(String(v).replace(/[^0-9.-]/g, '')) || 0;
@@ -109,7 +109,6 @@
   const nf = new Intl.NumberFormat();
   function fmtNum(n){ return nf.format(n|0); }
 
-  // Preserve caret while formatting
   function attachLiveFormatter(inputEl) {
     if (!inputEl) return;
     inputEl.addEventListener('input', (e) => {
@@ -118,11 +117,9 @@
       const before = el.value.slice(0, start);
       const offsetDigits = (before.match(/[0-9]/g) || []).length;
 
-      // Reformat
       const raw = parseNum(el.value);
       el.value = raw ? fmtNum(raw) : '';
 
-      // Restore caret by counting digits again
       let seen = 0, pos = 0;
       while (pos < el.value.length && seen < offsetDigits) {
         if (/[0-9]/.test(el.value[pos])) seen++;
@@ -132,7 +129,64 @@
     });
   }
 
-  // ---- Segmented toggle enhancement (hides original <select>) --------------
+  // ---- Initialize controls from URL (fallback to current DOM defaults) ------
+  const init = {
+    filingStatus:         readParam('fs')   || $('fs')?.value || 'single',
+    income:               readParam('inc')  ? parseNum(readParam('inc'))  : parseNum($('inc')?.value),
+    homeowner:            (readParam('ho') ?? $('ho')?.value ?? '1') === '1',
+    homeValue:            readParam('hv')   ? parseNum(readParam('hv'))   : parseNum($('hv')?.value),
+    miles:                readParam('mi')   ? +readParam('mi')   : +($('mi')?.value || 0),
+    mpg:                  readParam('mpg')  ? +readParam('mpg')  : +($('mpg')?.value || 1),
+    spendingShare:        readParam('ss')   ? +readParam('ss')   : +($('ss')?.value || 0.60),
+    taxableShare:         readParam('ts')   ? +readParam('ts')   : +($('ts')?.value || 0.55),
+    cigPacksPerWeek:      readParam('cig')  ? +readParam('cig')  : +($('cig')?.value || 0),
+    alcoholUnitsPerWeek:  readParam('alc')  ? +readParam('alc')  : +($('alc')?.value || 0),
+    includeFederal:       (readParam('fed') ?? $('fed')?.value ?? '0') === '1',
+    ltcg:                 readParam('ltcg') ? parseNum(readParam('ltcg')) : parseNum($('ltcg')?.value || '0'),
+  };
+
+  // Push URL-derived values into controls (so UI reflects URL on first paint)
+  if ($('fs'))  $('fs').value  = init.filingStatus;
+  if ($('inc')) $('inc').value = fmtNum(init.income);
+  if ($('ho'))  $('ho').value  = init.homeowner ? '1' : '0';
+  if ($('hv'))  $('hv').value  = fmtNum(init.homeValue);
+  if ($('mi'))  $('mi').value  = String(init.miles);
+  if ($('mpg')) $('mpg').value = String(init.mpg);
+  if ($('ss'))  $('ss').value  = String(init.spendingShare);
+  if ($('ts'))  $('ts').value  = String(init.taxableShare);
+  const _ssb = document.getElementById('ssb'); if (_ssb) _ssb.textContent = Math.round(init.spendingShare * 100) + '%';
+  const _tsb = document.getElementById('tsb'); if (_tsb) _tsb.textContent = Math.round(init.taxableShare  * 100) + '%';
+  if ($('cig')) $('cig').value = String(init.cigPacksPerWeek);
+  if ($('alc')) $('alc').value = String(init.alcoholUnitsPerWeek);
+  if ($('fed')) $('fed').value = init.includeFederal ? '1' : '0';
+  if ($('ltcg')) $('ltcg').value = fmtNum(init.ltcg);
+
+  // ---- State (kept simple and flat) -----------------------------------------
+  const state = { ...init };
+
+  // ---- Emit helper (updates URL, then notifies listeners) -------------------
+  function emit() {
+    writeParams([
+      ['fs',  state.filingStatus],
+      ['inc', state.income|0],
+      ['ho',  state.homeowner ? '1' : '0'],
+      ['hv',  state.homeValue|0],
+      ['mi',  state.miles],
+      ['mpg', state.mpg],
+      ['ss',  state.spendingShare],
+      ['ts',  state.taxableShare],
+      [ 'cig', state.cigPacksPerWeek ? state.cigPacksPerWeek : null ],
+      [ 'alc', state.alcoholUnitsPerWeek ? state.alcoholUnitsPerWeek : null ],
+      ['fed', state.includeFederal ? '1' : '0'],
+      [ 'ltcg', state.ltcg ? (state.ltcg|0) : null ],
+    ]);
+    // Microtask so live-formatters settle before recompute
+    queueMicrotask(() => {
+      window.dispatchEvent(new CustomEvent('t1:inputs', { detail: { ...state } }));
+    });
+  }
+
+  // ---- Segmented toggle enhancement (hides original <select>) ---------------
   function enhanceSegmented(container) {
     if (!container) return;
     const selectId = container.getAttribute('data-for');
@@ -152,44 +206,53 @@
       if (!btn) return;
       const v = btn.getAttribute('data-val');
       sel.value = v;
-      // update aria-pressed
       container.querySelectorAll('button[data-val]').forEach(b => {
         b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
       });
-      // push into state + emit
-      if (selectId === 'ho') state.homeowner = (v === '1');
+      if (selectId === 'ho')  state.homeowner      = (v === '1');
       if (selectId === 'fed') state.includeFederal = (v === '1');
       emit();
     });
   }
 
-  // ---- Wire up events (instant update on input) ----------------------------
+  // ---- Wire up events (instant update on input) -----------------------------
   $('fs')?.addEventListener('change', e => { state.filingStatus = e.target.value; emit(); });
 
-  const incEl = $('inc');   attachLiveFormatter(incEl);
+  const incEl = $('inc'); attachLiveFormatter(incEl);
   incEl?.addEventListener('input',  e => { state.income = parseNum(e.target.value); emit(); });
 
-  const hvEl  = $('hv');    attachLiveFormatter(hvEl);
+  const hvEl  = $('hv');  attachLiveFormatter(hvEl);
   hvEl?.addEventListener('input',   e => { state.homeValue = parseNum(e.target.value); emit(); });
 
   $('mi')?.addEventListener('input',  e => { state.miles = +e.target.value || 0; emit(); });
   $('mpg')?.addEventListener('input', e => { state.mpg   = +e.target.value || 1; emit(); });
 
-  $('ss')?.addEventListener('input',  e => { state.spendingShare = +e.target.value; emit(); });
-  $('ts')?.addEventListener('input',  e => { state.taxableShare  = +e.target.value; emit(); });
+  $('ss')?.addEventListener('input',  e => {
+    state.spendingShare = +e.target.value;
+    const b = document.getElementById('ssb');
+    if (b) b.textContent = Math.round(state.spendingShare * 100) + '%';
+    emit();
+  });
+
+  $('ts')?.addEventListener('input',  e => {
+    state.taxableShare  = +e.target.value;
+    const b = document.getElementById('tsb');
+    if (b) b.textContent = Math.round(state.taxableShare * 100) + '%';
+    emit();
+  });
 
   $('cig')?.addEventListener('input', e => { state.cigPacksPerWeek = +e.target.value || 0; emit(); });
   $('alc')?.addEventListener('input', e => { state.alcoholUnitsPerWeek = +e.target.value || 0; emit(); });
 
   $('fed')?.addEventListener('change', e => { state.includeFederal = (e.target.value === '1'); emit(); });
+
   const ltcgEl = $('ltcg'); attachLiveFormatter(ltcgEl);
   ltcgEl?.addEventListener('input', e => { state.ltcg = parseNum(e.target.value); emit(); });
 
   // Enhance Yes/No segmented controls and hide the selects
   document.querySelectorAll('.segmented[data-for]').forEach(enhanceSegmented);
 
-  // First paint
-  // (normalize displayed text values to include commas)
+  // First paint (normalize text values and emit an initial state)
   if (incEl) incEl.value = fmtNum(state.income);
   if (hvEl)  hvEl.value  = fmtNum(state.homeValue);
   if (ltcgEl)ltcgEl.value= fmtNum(state.ltcg);

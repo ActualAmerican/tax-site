@@ -1,0 +1,39 @@
+---
+import "../styles/utilities.css";
+---
+
+<!-- Lightweight global modal used by Breakdown/Compare -->
+<div id="t1-modal" class="t1-modal" hidden>
+  <div class="t1-modal__backdrop" data-close="1"></div>
+  <div class="t1-modal__panel" role="dialog" aria-modal="true" aria-labelledby="t1-modal-title">
+    <div class="t1-modal__header">
+      <h3 id="t1-modal-title" class="title-reset">Chart</h3>
+      <button class="badge" data-close="1" type="button">Close</button>
+    </div>
+    <div id="t1-modal-body" class="t1-modal__body"></div>
+  </div>
+</div>
+
+<script type="module">
+(function(){
+  const root  = document.getElementById('t1-modal');
+  const body  = document.getElementById('t1-modal-body');
+  const title = document.getElementById('t1-modal-title');
+  if (!root || !body || !title) return;
+
+  function open(detail={}) {
+    title.textContent = detail.title || 'Chart';
+    body.innerHTML    = detail.html  || '';
+    root.hidden = false;
+  }
+  function close(){ root.hidden = true; body.innerHTML=''; }
+
+  root.addEventListener('click', (e) => {
+    const t = e.target;
+    if (t && t.getAttribute && t.getAttribute('data-close') === '1') close();
+  });
+
+  window.addEventListener('t1:modal-open', (e)=>open(e.detail||{}));
+  window.addEventListener('t1:modal-close', close);
+})();
+</script>

@@ -9,3 +9,18 @@
   --bad: #ef4444;
   --border: #1f2a37;
 }
+/* === T1 category colors (used by stacked bars & pies) === */
+:root {
+  --t1-income: #7dd3fc; /* light sky */
+  --t1-sales: #fde68a; /* sand */
+  --t1-property: #c084fc; /* violet */
+  --t1-excise: #fca5a5; /* rose */
+  --t1-fuel: #f59e0b; /* amber */
+  --t1-fed-income: #93c5fd; /* cornflower */
+  --t1-payroll: #a7f3d0; /* mint */
+  --t1-ltcg: #f9a8d4; /* pink */
+
+  /* modal tokens */
+  --modal-scrim: rgba(0, 0, 0, 0.55);
+  --modal-panel: #0f1520;
+}

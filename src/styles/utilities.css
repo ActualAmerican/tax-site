@@ -358,3 +358,150 @@ details[open] > div {
   border-top: 2px solid var(--border);
   font-weight: 700;
 }
+.table-full tr.subtotal th,
+.table-full tr.subtotal td {
+  font-weight: 700;
+  border-top: 2px solid var(--border);
+}
+
+.table-full tr.loading td {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ---- Toolbar & chips ---- */
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.stack--row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #0c121a;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ---- Comparison helpers ---- */
+.diff-pos {
+  color: #45c56b;
+} /* right is better (lower) */
+.diff-neg {
+  color: #ff6b6b;
+} /* right is worse (higher) */
+.muted {
+  color: var(--muted);
+}
+.table-full .loading td {
+  color: var(--muted);
+  font-style: italic;
+}
+.header--space {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: #0c121a;
+}
+/* === Stacked bar === */
+.bar {
+  height: 16px;
+  background: #112233;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+.bar-seg {
+  height: 100%;
+  display: inline-block;
+}
+.bar-seg + .bar-seg {
+  box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Legend chips (used inside modal pie) */
+.legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.75rem;
+}
+.legend__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.legend__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+/* === Modal === */
+.t1-modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
+.t1-modal[hidden] {
+  display: none;
+}
+.t1-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--modal-scrim);
+}
+.t1-modal__panel {
+  position: relative;
+  width: min(720px, 92vw);
+  max-height: 88vh;
+  overflow: auto;
+  background: var(--modal-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+.t1-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.t1-modal__body {
+  display: block;
+}
+
+/* === Compare diff colors === */
+.diff-pos {
+  color: #45c56b;
+} /* right lower = good */
+.diff-neg {
+  color: #ff6b6b;
+} /* right higher = bad  */

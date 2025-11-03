@@ -4,10 +4,8 @@ import '../styles/utilities.css';
 import Map from '../components/Map.astro';
 import Inputs from '../components/Inputs.astro';
 import Breakdown from '../components/Breakdown.astro';
-import Assumptions from '../components/Assumptions.astro';
-import ContextCards from '../components/ContextCards.astro';
 import pack from '../../data/packs/2025.1.0.json';
-// Removed mapScript import as Map.astro will handle it.
+import Modal from '../components/Modal.astro';
 ---
 
 <html lang="en">
@@ -37,13 +35,13 @@ import pack from '../../data/packs/2025.1.0.json';
         <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> • built {pack.registry.built_at}</div>
 
         <Inputs id="inputs" />
-        <Assumptions pack={pack} />
+<!-- Assumptions temporarily removed -->
       </section>
 
       <section class="stack">
           <Map />
-        <Breakdown />
-        <ContextCards pack={pack} />
+<Breakdown />
+<!-- ContextCards temporarily removed -->
       </section>
     </main>
   </body>

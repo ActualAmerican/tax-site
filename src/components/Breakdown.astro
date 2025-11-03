@@ -9,10 +9,23 @@ const slot = compareSlot ?? 'solo';
   data-slot={slot}
   data-state={initialState}
 >
-  <div class="label">
-    <strong>Breakdown</strong><span id="bd-state">{initialState}</span>
+  <!-- Header with live chips + toolbar -->
+  <div class="header--space">
+    <div class="stack--row">
+      <strong>Breakdown</strong>
+      <span id="bd-state" class="badge">{initialState}</span>
+      <span class="chip" id="chip-total">—</span>
+      <span class="chip" id="chip-eff">—</span>
+    </div>
+    <div class="toolbar">
+      <a class="badge" id="bd-export" href={`/report?state=${initialState}`}>Export PDF</a>
+      <a class="badge" id="bd-compare" href={`/compare?a=${initialState}`}>Compare…</a>
+      <button class="badge" id="bd-pie" type="button" title="Open pie chart">Open chart</button>
+      <button class="badge" id="bd-copy" type="button">Copy link</button>
+    </div>
   </div>
 
+  <!-- Filled stacked bar -->
   <div id="chart" class="bar" aria-label="Stacked tax burden bar"></div>
 
   <table id="tbl" class="table-full">
@@ -32,363 +45,505 @@ const slot = compareSlot ?? 'solo';
       </tr>
     </tfoot>
   </table>
-
-  <div class="label">
-    <a class="badge" id="export" href={`/report?state=${initialState}`}>Export PDF</a>
-  </div>
 </div>
 
-<!-- Small client script to listen for state change events and update this panel's UI/export link -->
+<!-- Client: listens for state & inputs, renders rows, stacked bar, and manages toolbar -->
 <script type="module">
-  (function () {
-    // Find this panel reliably when executed as a module
-    const root =
-      (document.currentScript && document.currentScript.previousElementSibling) ||
-      document.querySelector('[data-t1-breakdown]');
-    if (!root) return;
+(function () {
+  // Panel root
+  const root =
+    (document.currentScript && document.currentScript.previousElementSibling) ||
+    document.querySelector('[data-t1-breakdown]');
+  if (!root) return;
 
-    // Determine which compare slot this panel represents
-    const slot = root.getAttribute('data-slot') || 'solo';
+  // Loading row until first compute
+  const _tbody = root.querySelector('tbody');
+  function setLoadingRow() {
+    if (!_tbody) return;
+    _tbody.innerHTML = '<tr class="loading"><td colspan="3">Loading latest tax data…</td></tr>';
+  }
+  setLoadingRow();
 
-    const stateLabel = root.querySelector('#bd-state');
-    const exportLink = root.querySelector('#export');
+  const slot       = root.getAttribute('data-slot') || 'solo';
+  const stateLabel = root.querySelector('#bd-state');
+  const exportLink = root.querySelector('#bd-export');
+  const compareLink= root.querySelector('#bd-compare');
+  const copyBtn    = root.querySelector('#bd-copy');
+  const pieBtn     = root.querySelector('#bd-pie');
+  const chipTotal  = root.querySelector('#chip-total');
+  const chipEff    = root.querySelector('#chip-eff');
+  const barEl      = root.querySelector('#chart');
 
-    // Minimal FIPS -> USPS code map (add more if needed)
-    const FIPS_TO_CODE = {
-      '01': 'AL','02': 'AK','04': 'AZ','05': 'AR','06': 'CA','08': 'CO','09': 'CT',
-      '10': 'DE','11': 'DC','12': 'FL','13': 'GA','15': 'HI','16': 'ID','17': 'IL',
-      '18': 'IN','19': 'IA','20': 'KS','21': 'KY','22': 'LA','23': 'ME','24': 'MD',
-      '25': 'MA','26': 'MI','27': 'MN','28': 'MS','29': 'MO','30': 'MT','31': 'NE',
-      '32': 'NV','33': 'NH','34': 'NJ','35': 'NM','36': 'NY','37': 'NC','38': 'ND',
-      '39': 'OH','40': 'OK','41': 'OR','42': 'PA','44': 'RI','45': 'SC','46': 'SD',
-      '47': 'TN','48': 'TX','49': 'UT','50': 'VT','51': 'VA','53': 'WA','54': 'WV',
-      '55': 'WI','56': 'WY','72': 'PR'
-    };
+  // FIPS → USPS map
+  const FIPS_TO_CODE = {
+    '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL','13':'GA',
+    '15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD','25':'MA',
+    '26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE','32':'NV','33':'NH','34':'NJ','35':'NM','36':'NY',
+    '37':'NC','38':'ND','39':'OH','40':'OK','41':'OR','42':'PA','44':'RI','45':'SC','46':'SD','47':'TN','48':'TX',
+    '49':'UT','50':'VT','51':'VA','53':'WA','54':'WV','55':'WI','56':'WY','72':'PR'
+  };
+  function normalizeStateCode(input) {
+    if (!input) return null;
+    const s = String(input).toUpperCase();
+    if (/^[A-Z]{2}$/.test(s)) return s;
+    const two = s.padStart(2,'0');
+    return FIPS_TO_CODE[two] || null;
+  }
 
-    function normalizeStateCode(input) {
-      // Accept 'CA' or '06' and normalize to 'CA'
-      if (!input) return null;
-      const s = String(input).toUpperCase();
-      if (s.length === 2 && /[A-Z]{2}/.test(s)) return s;
-      if (s.length <= 2) {
-        const two = s.padStart(2, '0');
-        return FIPS_TO_CODE[two] || null;
-      }
+  // Color mapping for categories (matches tokens.css)
+  const COLOR = {
+    income:      'var(--t1-income)',
+    sales:       'var(--t1-sales)',
+    property:    'var(--t1-property)',
+    excise:      'var(--t1-excise)',
+    fuel:        'var(--t1-fuel)',
+    fed_income:  'var(--t1-fed-income)',
+    payroll:     'var(--t1-payroll)',
+    ltcg:        'var(--t1-ltcg)'
+  };
+  function colorForKey(k){ return COLOR[k] || 'var(--accent)'; }
+
+  // Latest inputs seen by this panel
+  let latestInputs = {
+    filingStatus: 'single',
+    income: 60000,
+    homeowner: true,
+    homeValue: 300000,
+    miles: 12000,
+    mpg: 28,
+    spendingShare: 0.60,
+    taxableShare: 0.55,
+    includeFederal: false,
+    ltcg: 0
+  };
+
+  // Ignore stale async renders
+  let _seq = 0;
+
+  // Pack fetch/cache
+  let _packCache = null;
+  async function loadPack() {
+    if (_packCache) return _packCache;
+    try {
+      const res = await fetch('/data/packs/2025.1.0.json');
+      if (!res.ok) throw new Error('pack fetch failed');
+      _packCache = await res.json();
+      return _packCache;
+    } catch (err) {
+      console.warn('Breakdown: failed to load pack', err);
+      _packCache = null;
       return null;
     }
-
-    let latestInputs = {
-  filingStatus: 'single',
-  income: 60000,
-  homeowner: true,
-  homeValue: 300000,
-  miles: 12000,
-  mpg: 28,
-  spendingShare: 0.60,
-  taxableShare: 0.55,
-  includeFederal: false,
-  ltcg: 0
-};
-
-    function renderBreakdownRows(stateRows, federalRows, total) {
-  const tbody = root.querySelector('tbody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-
-  // group header row factory
-  const addGroupHeader = (label) => {
-    const tr = document.createElement('tr');
-    tr.className = 'group';
-    const th = document.createElement('th');
-    th.colSpan = 3;
-    th.textContent = label;
-    tr.appendChild(th);
-    tbody.appendChild(tr);
-  };
-
-  // row factory
-  const addRow = (r) => {
-    const tr = document.createElement('tr');
-    const tdCat = document.createElement('td'); tdCat.textContent = r.label;
-    const tdAmt = document.createElement('td'); tdAmt.className = 'text-right'; tdAmt.textContent = r.amount;
-    const tdPct = document.createElement('td'); tdPct.className = 'text-right'; tdPct.textContent = r.pct;
-    tr.appendChild(tdCat); tr.appendChild(tdAmt); tr.appendChild(tdPct);
-    tbody.appendChild(tr);
-  };
-
-  if (stateRows.length) {
-    addGroupHeader('State taxes');
-    stateRows.forEach(addRow);
   }
-  if (federalRows.length) {
-    addGroupHeader('Federal taxes');
-    federalRows.forEach(addRow);
-  }
-}
 
-    // Cache pack data to avoid refetching
-    let _packCache = null;
-    async function loadPack() {
-      if (_packCache) return _packCache;
-      try {
-        const res = await fetch('/data/packs/2025.1.0.json');
-        if (!res.ok) throw new Error('pack fetch failed');
-        _packCache = await res.json();
-        return _packCache;
-      } catch (err) {
-        console.warn('Breakdown: failed to load pack', err);
-        _packCache = null;
-        return null;
-      }
+  function findRow(arr, state) {
+    if (!arr) return null;
+    return (arr.find(r => String(r.state).toUpperCase() === String(state).toUpperCase()) || null);
+  }
+
+  function isStub(r, kind) {
+    if (!r) return true;
+    if (r.__stub === true || r.stub === true) return true;
+    if (kind === 'income') {
+      if (r.has_income_tax === false) return true;
+      const hasBrackets = Array.isArray(r.brackets) && r.brackets.length > 0;
+      const hasFlat = typeof r.flat === 'number';
+      return !(hasBrackets || hasFlat);
     }
-
-    function findRow(arr, state) {
-      if (!arr) return null;
-      return (arr.find(r => String(r.state).toUpperCase() === String(state).toUpperCase()) || null);
-    }
-
-function isStub(r, kind) {
-  if (!r) return true;
-  if (r.__stub === true || r.stub === true) return true;
-  // Heuristics per metric: consider "missing" if essential fields aren’t present
-  if (kind === 'income') {
-    if (r.has_income_tax === false) return true;
-    const hasBrackets = Array.isArray(r.brackets) && r.brackets.length > 0;
-    const hasFlat = typeof r.flat === 'number';
-    return !(hasBrackets || hasFlat);
-  }
-  if (kind === 'sales') {
-    return !(typeof r.combined_rate === 'number');
-  }
-  if (kind === 'property') {
-    return !(typeof r.effective_rate === 'number');
-  }
-  return false;
-}
-
-function computeFederalTotals(pack, inputs) {
-  const fed = pack && pack.federal ? pack.federal : null;
-  const fs  = (inputs.filingStatus || 'single').toLowerCase();
-  const inc = Number(inputs.income) || 0;
-  const ltcg = Number(inputs.ltcg) || 0;
-
-  // Income tax via brackets
-  function taxFromBrackets(def, taxable, stdDedOverride) {
-    if (!def) return 0;
-    const std = stdDedOverride != null ? stdDedOverride : (def.standard_deduction || 0);
-    const base = Math.max(0, taxable - std);
-    let tax = 0, prev = 0;
-    const brackets = def.brackets || [];
-    for (const b of brackets) {
-      const cap = (b.up_to == null) ? base : b.up_to;
-      const slice = Math.max(0, Math.min(base, cap) - prev);
-      tax += slice * (b.rate || 0);
-      prev = cap;
-      if (prev >= base) break;
-    }
-    return Math.round(tax);
+    if (kind === 'sales')    return !(typeof r.combined_rate  === 'number');
+    if (kind === 'property') return !(typeof r.effective_rate === 'number');
+    return false;
   }
 
-  const incomeDef = fed && fed.income && (fed.income[fs] || fed.income.single) || null;
-  const federalIncome = taxFromBrackets(incomeDef, inc);
+  function computeFederalTotals(pack, inputs) {
+    const fed = pack && pack.federal ? pack.federal : null;
+    const fs  = (inputs.filingStatus || 'single').toLowerCase();
+    const inc = Number(inputs.income) || 0;
+    const ltcg = Number(inputs.ltcg) || 0;
 
-  // Payroll (employee share)
-  const pr = fed && fed.payroll || {};
-  const ssBase   = pr.ss_wage_base ?? 168600;
-  const ssRate   = pr.ss_rate ?? 0.062;
-  const mediRate = pr.medicare_rate ?? 0.0145;
-  const addRate  = pr.addl_medicare_rate ?? 0.009;
-  const addThreshMap = pr.addl_threshold || { single: 200000, married: 250000 };
-  const addThresh = addThreshMap[fs] ?? 200000;
-
-  const ss   = Math.min(inc, ssBase) * ssRate;
-  const medi = inc * mediRate + Math.max(0, inc - addThresh) * addRate;
-  const payroll = Math.round(ss + medi);
-
-  // LTCG
-  let ltcgTax = 0;
-  const cgDef = fed && fed.ltcg && (fed.ltcg[fs] || fed.ltcg.single) || null;
-  if (cgDef && ltcg > 0) {
-    let prev = 0;
-    const brackets = cgDef.brackets || [];
-    for (const b of brackets) {
-      const cap = (b.up_to == null) ? ltcg : b.up_to;
-      const slice = Math.max(0, Math.min(ltcg, cap) - prev);
-      ltcgTax += slice * (b.rate || 0);
-      prev = cap;
-      if (prev >= ltcg) break;
-    }
-    ltcgTax = Math.round(ltcgTax);
-  }
-
-  return { federalIncome, payroll, ltcgTax, total: federalIncome + payroll + ltcgTax };
-}
-
-    async function computeDemoBreakdown(code) {
-  const inc  = Number(latestInputs.income) || 0;
-  const hv   = Number(latestInputs.homeValue) || 0;
-  const home = !!latestInputs.homeowner;
-
-  const pack = await loadPack();
-
-  // ----- STATE CATEGORIES -----
-let stIncome = 0, stIncomeMissing = false;
-// Income tax (state)
-if (pack && pack.income) {
-  const row = findRow(pack.income, code);
-  if (!row || isStub(row, 'income')) {
-    stIncomeMissing = true;
-  } else if (row.has_income_tax) {
-    const std = row.standard_deduction || 0;
-    const taxable = Math.max(0, inc - std);
-    if (typeof row.flat === 'number') {
-      stIncome = Math.round(taxable * row.flat);
-    } else {
-      const brackets = row.brackets || [];
-      let prev = 0;
+    function taxFromBrackets(def, taxable, stdDedOverride) {
+      if (!def) return 0;
+      const std = stdDedOverride != null ? stdDedOverride : (def.standard_deduction || 0);
+      const base = Math.max(0, taxable - std);
+      let tax = 0, prev = 0;
+      const brackets = def.brackets || [];
       for (const b of brackets) {
-        const cap = (b.up_to == null) ? taxable : b.up_to;
-        const slice = Math.max(0, Math.min(taxable, cap) - prev);
-        stIncome += Math.round(slice * (b.rate || 0));
+        const cap = (b.up_to == null) ? base : b.up_to;
+        const slice = Math.max(0, Math.min(base, cap) - prev);
+        tax += slice * (b.rate || 0);
         prev = cap;
-        if (prev >= taxable) break;
+        if (prev >= base) break;
+      }
+      return Math.round(tax);
+    }
+
+    const incomeDef = fed && fed.income && (fed.income[fs] || fed.income.single) || null;
+    const federalIncome = taxFromBrackets(incomeDef, inc);
+
+    const pr = fed && fed.payroll || {};
+    const ssBase   = pr.ss_wage_base ?? 168600;
+    const ssRate   = pr.ss_rate ?? 0.062;
+    const mediRate = pr.medicare_rate ?? 0.0145;
+    const addRate  = pr.addl_medicare_rate ?? 0.009;
+    const addThreshMap = pr.addl_threshold || { single: 200000, married: 250000 };
+    const addThresh = addThreshMap[fs] ?? 200000;
+
+    const ss   = Math.min(inc, ssBase) * ssRate;
+    const medi = inc * mediRate + Math.max(0, inc - addThresh) * addRate;
+    const payroll = Math.round(ss + medi);
+
+    let ltcgTax = 0;
+    const cgDef = fed && fed.ltcg && (fed.ltcg[fs] || fed.ltcg.single) || null;
+    if (cgDef && ltcg > 0) {
+      let prev = 0;
+      const brackets = cgDef.brackets || [];
+      for (const b of brackets) {
+        const cap = (b.up_to == null) ? ltcg : b.up_to;
+        const slice = Math.max(0, Math.min(ltcg, cap) - prev);
+        ltcgTax += slice * (b.rate || 0);
+        prev = cap;
+        if (prev >= ltcg) break;
+      }
+      ltcgTax = Math.round(ltcgTax);
+    }
+
+    return {
+      federalIncome,
+      payroll,
+      ltcgTax,
+      total: federalIncome + payroll + ltcgTax,
+      payrollAssumptions: { ssBase, ssRate, mediRate, addRate, addThresh }
+    };
+  }
+
+  // Utilities
+  const fmt = (v) => '$' + (Number(v || 0)).toLocaleString();
+  function pctOf(part, total){ return ((part / Math.max(1,total)) * 100).toFixed(0) + '%'; }
+
+  function renderBreakdownRows(stateRows, federalRows, totals) {
+    const tbody = root.querySelector('tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const addGroupHeader = (label) => {
+      const tr = document.createElement('tr');
+      tr.className = 'group';
+      const th = document.createElement('th');
+      th.colSpan = 3;
+      th.textContent = label;
+      tr.appendChild(th);
+      tbody.appendChild(tr);
+    };
+
+    const addRow = (r) => {
+      const tr = document.createElement('tr');
+      const tdCat = document.createElement('td');
+      if (r.title) tdCat.innerHTML = `<span title="${r.title.replace(/"/g, '&quot;')}">${r.label}</span>`;
+      else         tdCat.textContent = r.label;
+      const tdAmt = document.createElement('td'); tdAmt.className = 'text-right'; tdAmt.textContent = r.amount;
+      const tdPct = document.createElement('td'); tdPct.className = 'text-right'; tdPct.textContent = r.pct;
+      tr.appendChild(tdCat); tr.appendChild(tdAmt); tr.appendChild(tdPct);
+      tbody.appendChild(tr);
+    };
+
+    const addSubtotal = (label, amount, pct) => {
+      const tr = document.createElement('tr');
+      tr.className = 'subtotal';
+      const th = document.createElement('th'); th.textContent = label;
+      const tdAmt = document.createElement('td'); tdAmt.className = 'text-right'; tdAmt.textContent = amount;
+      const tdPct = document.createElement('td'); tdPct.className = 'text-right'; tdPct.textContent = pct;
+      tr.appendChild(th); tr.appendChild(tdAmt); tr.appendChild(tdPct);
+      tbody.appendChild(tr);
+    };
+
+    if (stateRows.length) {
+      addGroupHeader('State taxes');
+      stateRows.forEach(addRow);
+      addSubtotal('State subtotal', totals.state.amount, totals.state.pct);
+    }
+    if (federalRows.length) {
+      addGroupHeader('Federal taxes');
+      federalRows.forEach(addRow);
+      addSubtotal('Federal subtotal', totals.federal.amount, totals.federal.pct);
+    }
+  }
+
+  function buildCompareHref(code){
+    const u = new URL(location.href);
+    u.pathname = '/compare';
+    u.searchParams.set('a', code);
+    if (!u.searchParams.get('b')) u.searchParams.set('b','TX');
+    return u.toString();
+  }
+
+  // state for the chart button
+  let _lastSegments = [];
+
+  // Render stacked bar
+  function renderStackedBar(segments, total){
+    if (!barEl) return;
+    barEl.innerHTML = '';
+    const positive = segments.filter(s => s.value > 0);
+    for (const s of positive) {
+      const seg = document.createElement('section');
+      seg.className = 'bar-seg';
+      seg.style.width      = ((s.value / Math.max(1,total)) * 100) + '%';
+      seg.style.background = s.color;
+      seg.title = `${s.label}: ${fmt(s.value)} (${pctOf(s.value,total)})`;
+      barEl.appendChild(seg);
+    }
+  }
+
+  // Build inline SVG donut for the modal
+  function buildPieHTML(title, segments){
+    const data = segments.filter(s=>s.value>0);
+    const total = data.reduce((a,s)=>a+s.value,0) || 1;
+    const size=320, cx=size/2, cy=size/2, r=120, r0=72;
+
+    let a0 = -Math.PI/2; // start at top
+    const arcs = [];
+    for (const s of data){
+      const a1 = a0 + (s.value/total) * Math.PI*2;
+      const large = (a1 - a0) > Math.PI ? 1 : 0;
+      const x0 = cx + r*Math.cos(a0), y0 = cy + r*Math.sin(a0);
+      const x1 = cx + r*Math.cos(a1), y1 = cy + r*Math.sin(a1);
+      const x0i = cx + r0*Math.cos(a0), y0i = cy + r0*Math.sin(a0);
+      const x1i = cx + r0*Math.cos(a1), y1i = cy + r0*Math.sin(a1);
+      const d = [
+        `M ${x0} ${y0}`,
+        `A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`,
+        `L ${x1i} ${y1i}`,
+        `A ${r0} ${r0} 0 ${large} 0 ${x0i} ${y0i}`,
+        'Z'
+      ].join(' ');
+      arcs.push(`<path d="${d}" fill="${s.color}" />`);
+      a0 = a1;
+    }
+
+    const legend = data.map(s => `
+      <div class="legend__item">
+        <span class="legend__swatch" style="background:${s.color}"></span>
+        <span>${s.label} — <strong>${fmt(s.value)}</strong> (${pctOf(s.value,total)})</span>
+      </div>
+    `).join('');
+
+    return `
+      <div class="stack">
+        <div class="big-number">${title}</div>
+        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-label="Tax composition">
+          ${arcs.join('')}
+        </svg>
+        <div class="legend">${legend}</div>
+      </div>
+    `;
+  }
+
+  async function computeDemoBreakdown(code) {
+    const mySeq = ++_seq;
+
+    const inc  = Number(latestInputs.income) || 0;
+    const hv   = Number(latestInputs.homeValue) || 0;
+
+    const pack = await loadPack();
+    if (!pack) { setLoadingRow(); return; }
+    if (mySeq !== _seq) return; // stale compute, abort
+
+    // ----- STATE CATEGORIES -----
+    let stIncome = 0, stIncomeMissing = false;
+    if (pack && pack.income) {
+      const row = findRow(pack.income, code);
+      if (!row || isStub(row, 'income')) {
+        stIncomeMissing = true;
+      } else if (row.has_income_tax) {
+        const std = row.standard_deduction || 0;
+        const taxable = Math.max(0, inc - std);
+        if (typeof row.flat === 'number') {
+          stIncome = Math.round(taxable * row.flat);
+        } else {
+          const brackets = row.brackets || [];
+          let prev = 0;
+          for (const b of brackets) {
+            const cap = (b.up_to == null) ? taxable : b.up_to;
+            const slice = Math.max(0, Math.min(taxable, cap) - prev);
+            stIncome += Math.round(slice * (b.rate || 0));
+            prev = cap;
+            if (prev >= taxable) break;
+          }
+        }
+      } else {
+        stIncomeMissing = true;
+      }
+    } else {
+      stIncomeMissing = true;
+    }
+
+    let stSales = 0, stSalesMissing = false;
+    if (pack && pack.sales) {
+      const srow = findRow(pack.sales, code);
+      if (!srow || isStub(srow, 'sales')) {
+        stSalesMissing = true;
+      } else {
+        const rate = srow.combined_rate || 0;
+        const spendingShare = Number(latestInputs.spendingShare) || 0.6;
+        stSales = Math.round(inc * spendingShare * rate);
+      }
+    } else {
+      stSalesMissing = true;
+    }
+
+    let stProperty = 0, stPropertyMissing = false;
+    if (pack && pack.property) {
+      const prow = findRow(pack.property, code);
+      if (!prow || isStub(prow, 'property')) {
+        stPropertyMissing = true;
+      } else {
+        const effRate = prow.effective_rate || 0;
+        stProperty = Math.round(hv * effRate);
+      }
+    } else {
+      stPropertyMissing = true;
+    }
+
+    // ----- FEDERAL (optional) -----
+    let fedIncome = 0, fedPayroll = 0, fedLTCG = 0, payrollTitle = '';
+    if (latestInputs.includeFederal) {
+      const f = computeFederalTotals(pack, latestInputs);
+      fedIncome  = f.federalIncome;
+      fedPayroll = f.payroll;
+      fedLTCG    = f.ltcgTax;
+
+      const p = f.payrollAssumptions || {};
+      if (p && p.ssBase != null) {
+        payrollTitle = [
+          `Social Security wage base $${Number(p.ssBase).toLocaleString()}`,
+          `OASDI ${(p.ssRate*100).toFixed(1)}%`,
+          `Medicare ${(p.mediRate*100).toFixed(2)}%`,
+          `+ ${(p.addRate*100).toFixed(1)}% above $${Number(p.addThresh).toLocaleString()}`
+        ].join(' · ');
       }
     }
-  } else {
-    stIncomeMissing = true;
-  }
-} else {
-  stIncomeMissing = true;
-}
 
-let stSales = 0, stSalesMissing = false;
-// Sales tax
-if (pack && pack.sales) {
-  const srow = findRow(pack.sales, code);
-  if (!srow || isStub(srow, 'sales')) {
-    stSalesMissing = true;
-  } else {
-    const rate = srow.combined_rate || 0;
-    const spendingShare = Number(latestInputs.spendingShare) || 0.6;
-    stSales = Math.round(inc * spendingShare * rate);
-  }
-} else {
-  stSalesMissing = true;
-}
-
-let stProperty = 0, stPropertyMissing = false;
-// Property tax
-if (pack && pack.property) {
-  const prow = findRow(pack.property, code);
-  if (!prow || isStub(prow, 'property')) {
-    stPropertyMissing = true;
-  } else {
-    const eff = prow.effective_rate || 0;
-    stProperty = Math.round(hv * eff);
-  }
-} else {
-  stPropertyMissing = true;
-}
-
-  // ----- FEDERAL (optional) -----
-  let fedIncome = 0, fedPayroll = 0, fedLTCG = 0;
-  if (latestInputs.includeFederal) {
-    const f = computeFederalTotals(pack, latestInputs);
-    fedIncome  = f.federalIncome;
-    fedPayroll = f.payroll;
-    fedLTCG    = f.ltcgTax;
-  }
-
-  // Build grouped rows (null means “no data” → show em-dash)
-const stateNumeric = [
-  { label: 'Income tax',   value: stIncomeMissing   ? null : stIncome },
-  { label: 'Sales tax',    value: stSalesMissing    ? null : stSales },
-  { label: 'Property tax', value: stPropertyMissing ? null : stProperty },
-];
-
-const federalNumeric = [];
-if (latestInputs.includeFederal) {
-  federalNumeric.push({ label: 'Federal income',     value: fedIncome });
-  federalNumeric.push({ label: 'Payroll (employee)', value: fedPayroll });
-  if (fedLTCG > 0) federalNumeric.push({ label: 'LTCG', value: fedLTCG });
-}
-
-const total = [...stateNumeric, ...federalNumeric]
-  .reduce((a, r) => a + (r.value ?? 0), 0);
-
-const fmt = (v) => '$' + (Number(v || 0)).toLocaleString();
-
-const toDisplay = (arr) => arr.map(r => ({
-  label:  r.label,
-  amount: r.value == null ? '—' : fmt(r.value),
-  pct:    r.value == null ? '—' : ((r.value / Math.max(1, total)) * 100).toFixed(0) + '%'
-}));
-
-const stateDisplay   = toDisplay(stateNumeric);
-const federalDisplay = toDisplay(federalNumeric);
-
-const tot = root.querySelector('#tot');
-const eff = root.querySelector('#eff');
-if (tot) tot.textContent = fmt(total);
-if (eff) eff.textContent = ((total / Math.max(1, inc)) * 100).toFixed(1) + '%';
-
-renderBreakdownRows(stateDisplay, federalDisplay, total);
-}
-
-    function updateState(val) {
-      const code = normalizeStateCode(val);
-      try { console.log('Breakdown:updateState raw', val, 'normalized', code); } catch (e) {}
-
-      // Read current inputs directly from the page to ensure we use the
-      // most recent committed values when switching states. This avoids
-      // requiring the user to change an input to force a recompute.
-      // helper to parse formatted numeric strings (commas, $ etc.)
-      function _parseNum(v) { try { return Number(String(v).replace(/[^0-9.\-\.]/g, '')) || 0; } catch (e) { return 0; } }
-      try {
-        const form = document.querySelector('form[aria-label="Tax inputs"]');
-if (form) {
-  const get = id => form.querySelector('#' + id);
-  const incEl  = get('inc');
-  const hvEl   = get('hv');
-  const hoEl   = get('ho');
-  const fsEl   = get('fs');
-  const ssEl   = get('ss');
-  const tsEl   = get('ts');
-  const fedEl  = get('fed');
-  const ltcgEl = get('ltcg');
-
-  latestInputs.income        = incEl  ? _parseNum(incEl.value)  : latestInputs.income;
-  latestInputs.homeValue     = hvEl   ? _parseNum(hvEl.value)   : latestInputs.homeValue;
-  latestInputs.homeowner     = hoEl   ? (hoEl.value === '1')    : latestInputs.homeowner;
-  latestInputs.filingStatus  = fsEl   ? (fsEl.value || 'single') : latestInputs.filingStatus;
-  latestInputs.spendingShare = ssEl   ? (+ssEl.value)           : latestInputs.spendingShare;
-  latestInputs.taxableShare  = tsEl   ? (+tsEl.value)           : latestInputs.taxableShare;
-  latestInputs.includeFederal= fedEl  ? (fedEl.value === '1')   : latestInputs.includeFederal;
-  latestInputs.ltcg          = ltcgEl ? _parseNum(ltcgEl.value) : latestInputs.ltcg;
-}
-      } catch (err) { /* ignore */ }
-
-      if (!code) return;
-
-      root.setAttribute('data-state', code);
-      if (stateLabel) stateLabel.textContent = code;
-      if (exportLink) exportLink.setAttribute('href', `/report?state=${code}`);
-
-      // Recompute demo breakdown with the latest inputs
-      computeDemoBreakdown(code);
+    // Build rows + totals
+    const stateNumeric = [
+      { key:'income',   label: 'Income tax',   value: stIncomeMissing   ? null : stIncome },
+      { key:'sales',    label: 'Sales tax',    value: stSalesMissing    ? null : stSales },
+      { key:'property', label: 'Property tax', value: stPropertyMissing ? null : stProperty },
+    ];
+    const federalNumeric = [];
+    if (latestInputs.includeFederal) {
+      federalNumeric.push({ key:'fed_income', label: 'Federal income',     value: fedIncome });
+      federalNumeric.push({ key:'payroll',    label: 'Payroll (employee)', value: fedPayroll, title: payrollTitle || undefined });
+      if (fedLTCG > 0) federalNumeric.push({ key:'ltcg', label:'LTCG', value: fedLTCG });
     }
 
-    // Generic event: map clicks dispatch 't1:state' with FIPS; normalize and update
-    window.addEventListener('t1:state', (e) => {
-      const s = e.detail;
-      try { console.log('Breakdown: received t1:state', s); } catch (e) {}
-      if (!s) return;
-      if (slot === 'solo') updateState(s);
-    });
+    const total = [...stateNumeric, ...federalNumeric].reduce((a, r) => a + (r.value ?? 0), 0);
+    const stateSum = stateNumeric.reduce((a, r) => a + (r.value ?? 0), 0);
+    const fedSum   = federalNumeric.reduce((a, r) => a + (r.value ?? 0), 0);
 
-    // Listen for input changes so breakdown can update live
-    window.addEventListener('t1:inputs', (e) => {
-  try {
+    const toDisplay = (arr) => arr.map(r => ({
+      key:    r.key,
+      label:  r.label,
+      amount: r.value == null ? '—' : fmt(r.value),
+      pct:    r.value == null ? '—' : pctOf(r.value,total),
+      title:  r.title
+    }));
+    const stateDisplay   = toDisplay(stateNumeric);
+    const federalDisplay = toDisplay(federalNumeric);
+
+    // Update chips + table
+    const totEl = root.querySelector('#tot');
+    const effEl = root.querySelector('#eff');
+    if (totEl) totEl.textContent = fmt(total);
+    const effRateStr = ((total / Math.max(1, inc)) * 100).toFixed(1) + '%';
+    if (effEl) effEl.textContent = effRateStr;
+    if (chipTotal) chipTotal.textContent = totEl ? totEl.textContent : fmt(total);
+    if (chipEff)   chipEff.textContent   = effEl ? effEl.textContent : effRateStr;
+
+    renderBreakdownRows(
+      stateDisplay,
+      federalDisplay,
+      { state: { amount: fmt(stateSum), pct: pctOf(stateSum,total) }, federal: { amount: fmt(fedSum), pct: pctOf(fedSum,total) } }
+    );
+
+    // Build stacked-bar segments (state + federal) with colors
+    const segments = [...stateNumeric, ...federalNumeric]
+      .filter(r => (r.value ?? 0) > 0)
+      .map(r => ({ key:r.key, label:r.label, value:r.value, color: colorForKey(r.key) }));
+    _lastSegments = segments; // store for "Open chart"
+    renderStackedBar(segments, total);
+
+    // ---- Emit a structured snapshot so Compare can render side-by-side ----
+    const snapshot = {
+      slot,
+      state: code,
+      inputs: {
+        filingStatus: latestInputs.filingStatus,
+        income: inc,
+        includeFederal: !!latestInputs.includeFederal,
+        ltcg: latestInputs.ltcg
+      },
+      totals: {
+        stateSubtotal: stateSum,
+        federalSubtotal: fedSum,
+        total,
+        effectiveRate: total / Math.max(1, inc)
+      },
+      rows: {
+        state: stateNumeric,
+        federal: federalNumeric
+      }
+    };
+    root.dispatchEvent(new CustomEvent('t1:breakdown-computed', { detail: snapshot, bubbles: true }));
+  }
+
+  function updateState(val) {
+    const code = normalizeStateCode(val);
+
+    // Read latest inputs from the form
+    try {
+      const form = document.querySelector('form[aria-label="Tax inputs"]');
+      if (form) {
+        const get = id => form.querySelector('#' + id);
+        const incEl  = get('inc');
+        const hvEl   = get('hv');
+        const hoEl   = get('ho');
+        const fsEl   = get('fs');
+        const ssEl   = get('ss');
+        const tsEl   = get('ts');
+        const fedEl  = get('fed');
+        const ltcgEl = get('ltcg');
+        const parse = (v) => Number(String(v||'').replace(/[^0-9.-]/g,'')) || 0;
+
+        latestInputs.income         = incEl  ? parse(incEl.value)  : latestInputs.income;
+        latestInputs.homeValue      = hvEl   ? parse(hvEl.value)   : latestInputs.homeValue;
+        latestInputs.homeowner      = hoEl   ? (hoEl.value === '1') : latestInputs.homeowner;
+        latestInputs.filingStatus   = fsEl   ? (fsEl.value || 'single') : latestInputs.filingStatus;
+        latestInputs.spendingShare  = ssEl   ? (+ssEl.value)           : latestInputs.spendingShare;
+        latestInputs.taxableShare   = tsEl   ? (+tsEl.value)           : latestInputs.taxableShare;
+        latestInputs.includeFederal = fedEl  ? (fedEl.value === '1')   : latestInputs.includeFederal;
+        latestInputs.ltcg           = ltcgEl ? parse(ltcgEl.value)     : latestInputs.ltcg;
+      }
+    } catch {}
+
+    if (!code) return;
+
+    root.setAttribute('data-state', code);
+    if (stateLabel) stateLabel.textContent = code;
+    if (exportLink) exportLink.setAttribute('href', `/report?state=${code}`);
+    if (compareLink) compareLink.setAttribute('href', buildCompareHref(code));
+
+    requestAnimationFrame(() => computeDemoBreakdown(code));
+  }
+
+  // Map selects a new state
+  window.addEventListener('t1:state', (e) => {
+    const s = e.detail;
+    if (!s) return;
+    if (slot === 'solo') updateState(s);
+  });
+
+  // Inputs changed → recompute current state (next frame)
+  window.addEventListener('t1:inputs', (e) => {
     const d = e.detail || {};
     latestInputs.filingStatus   = d.filingStatus   ?? latestInputs.filingStatus;
     latestInputs.income         = d.income         ?? latestInputs.income;
@@ -401,31 +556,38 @@ if (form) {
     latestInputs.includeFederal = (typeof d.includeFederal === 'boolean') ? d.includeFederal : latestInputs.includeFederal;
     latestInputs.ltcg           = d.ltcg           ?? latestInputs.ltcg;
 
-    // Recompute breakdown for current state
-    const cur = root.getAttribute('data-state') || stateLabel.textContent;
-    computeDemoBreakdown(cur);
-  } catch (err) { console.warn('Breakdown t1:inputs handler error', err); }
-});
+    const cur = root.getAttribute('data-state') || stateLabel?.textContent || 'CA';
+    requestAnimationFrame(() => computeDemoBreakdown(cur));
+  });
 
-    // Compare slots (future)
-    window.addEventListener('t1:state-left',  (e) => { if (slot === 'left')  updateState(e.detail); });
-    window.addEventListener('t1:state-right', (e) => { if (slot === 'right') updateState(e.detail); });
+  // Compare slots support
+  window.addEventListener('t1:state-left',  (e) => { if (slot === 'left')  updateState(e.detail); });
+  window.addEventListener('t1:state-right', (e) => { if (slot === 'right') updateState(e.detail); });
 
-    // Direct API for programmatic control
-    root.addEventListener('t1:set-state', (ev) => { if (ev.detail) updateState(ev.detail); });
-
-    // Initialize from URL (?fips=06 or ?state=CA)
+  // Copy link (local toolbar)
+  copyBtn?.addEventListener('click', async () => {
     try {
-      const url = new URL(location.href);
-      const fips  = url.searchParams.get('fips');
-      const state = url.searchParams.get('state');
-      updateState(state || fips);
+      await navigator.clipboard.writeText(location.href);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1200);
     } catch {}
-  })();
-  // Recompute when inputs change (even if the map selection stays the same)
-window.addEventListener('t1:inputs', () => {
-  // re-emit a local event most compute modules already listen for
-  document.querySelector('[data-t1-breakdown]')?.dispatchEvent(new CustomEvent('t1:recompute'));
-});
+  });
 
+  // Open chart (pie modal)
+  pieBtn?.addEventListener('click', () => {
+    const code = root.getAttribute('data-state') || '—';
+    const html = buildPieHTML(`${code} — tax mix`, _lastSegments);
+    window.dispatchEvent(new CustomEvent('t1:modal-open', { detail: { title: 'Tax composition', html } }));
+  });
+
+  // Initialize from URL (?fips=06 or ?state=CA), else use data-state
+  try {
+    const url  = new URL(location.href);
+    const fips = url.searchParams.get('fips');
+    const st   = url.searchParams.get('state');
+    updateState(st || fips || root.getAttribute('data-state') || 'CA');
+  } catch {
+    updateState(root.getAttribute('data-state') || 'CA');
+  }
+})();
 </script>

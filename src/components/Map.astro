@@ -154,18 +154,6 @@ window.addEventListener('popstate', (e) => {
 
     // --- Click handlers (per-path + delegated fallback) ---
 
-    // Update URL query param when a state is selected so the app can deep-link to state views.
-    function updateURLState(s) {
-      try {
-        const u = new URL(window.location.href);
-        if (s) u.searchParams.set('state', String(s));
-        else u.searchParams.delete('state');
-        window.history.replaceState({}, '', u.toString());
-      } catch (err) {
-        // ignore
-      }
-    }
-
     // Ensure state paths receive pointer events (some browsers/styles may override)
     svg.querySelectorAll('.state').forEach((p) => { try { p.style.pointerEvents = 'auto'; } catch (e) {} });
 
@@ -372,9 +360,9 @@ window.addEventListener('popstate', (e) => {
         if (path) {
           const f = path.getAttribute('data-fips');
           if (f && f !== _lastCenterState) {
-            _lastCenterState = f;
-            window.dispatchEvent(new CustomEvent('t1:state', { detail: f }));
-            updateURLState(f);
+                        _lastCenterState = f;
+            // Use selectState to update UI and ?fips= without pushing history
+            selectState(f, { emit: true, push: false });
           }
         }
       } catch (err) {
@@ -435,16 +423,16 @@ window.addEventListener('popstate', (e) => {
       // If a `state` query param is present on load, broadcast it so other panels sync.
       try {
         const params = new URL(window.location.href).searchParams;
-        const s = params.get('state');
-        if (s) window.dispatchEvent(new CustomEvent('t1:state', { detail: s }));
+const f = params.get('fips');
+if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: f }));
       } catch (err) {}
     });
   } else {
     initMapClient();
     try {
       const params = new URL(window.location.href).searchParams;
-      const s = params.get('state');
-      if (s) window.dispatchEvent(new CustomEvent('t1:state', { detail: s }));
+const f = params.get('fips');
+if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: f }));
     } catch (err) {}
   }
 
