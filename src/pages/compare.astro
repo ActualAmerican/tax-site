@@ -3,6 +3,8 @@ import '../styles/tokens.css';
 import '../styles/utilities.css';
 import Breakdown from '../components/Breakdown.astro';
 import Modal from '../components/Modal.astro'; 
+import Assumptions from '../components/Assumptions.astro';
+import pack from '../../data/packs/2025.1.0.json';
 
 const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const qp = new URL(Astro.request.url).searchParams;
@@ -55,6 +57,10 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
         </div>
 
         <span id="share-status" class="muted-note" aria-live="polite"></span>
+        <details class="stack">
+          <summary class="label">Assumptions & sources</summary>
+          <Assumptions pack={pack} />
+        </details>
       </section>
 
       <section class="container grid-2">
@@ -121,6 +127,20 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
           window.dispatchEvent(new CustomEvent('t1:inputs', { detail: payload }));
         });
       }
+
+      // Normalize any garbled glyphs in static markup (defensive)
+      (function normalizeGarbledText(){
+        const swapBtn = $('#swap'); if (swapBtn) swapBtn.textContent = 'Swap ↔';
+        const chipIds = ['#sum-left-total','#sum-left-eff','#sum-right-total','#sum-right-eff'];
+        for (const id of chipIds) { const el = $(id); if (el && (!el.textContent || /[^\w$%]/.test(el.textContent))) el.textContent = '—'; }
+        const head = $('#cmp-table thead tr');
+        if (head && head.children && head.children.length >= 5) {
+          head.children[3].textContent = 'Δ';
+          head.children[4].textContent = 'Δ%';
+        }
+        const loading = $('#cmp-table tbody .loading td');
+        if (loading) loading.textContent = 'Waiting for both sides…';
+      })();
 
       // Maintain latest snapshots from both Breakdown panels
       let snapL = null, snapR = null;

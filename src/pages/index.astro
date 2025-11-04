@@ -4,6 +4,8 @@ import '../styles/utilities.css';
 import Map from '../components/Map.astro';
 import Inputs from '../components/Inputs.astro';
 import Breakdown from '../components/Breakdown.astro';
+import Assumptions from '../components/Assumptions.astro';
+import ContextCards from '../components/ContextCards.astro';
 import pack from '../../data/packs/2025.1.0.json';
 import Modal from '../components/Modal.astro';
 ---
@@ -35,14 +37,25 @@ import Modal from '../components/Modal.astro';
         <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> • built {pack.registry.built_at}</div>
 
         <Inputs id="inputs" />
-<!-- Assumptions temporarily removed -->
+        <Assumptions pack={pack} />
       </section>
 
       <section class="stack">
           <Map />
 <Breakdown />
-<!-- ContextCards temporarily removed -->
+          <ContextCards pack={pack} initialState="CA" />
       </section>
     </main>
+    <script type="module">
+      try {
+        const t = document.querySelector('h1.heading--tight');
+        if (t) t.textContent = 'T1 — State + Federal Tax Burden Map';
+        const badge = document.querySelector('.badge');
+        if (badge) badge.innerHTML = badge.innerHTML.replace(/built.*/, (m)=>m.replace(/.+?built/,' — built'));
+        const og = document.querySelector('meta[property="og:title"]');
+        if (og) og.setAttribute('content','T1 — State + Federal Tax Burden Map');
+        document.title = 'T1 — State + Federal Tax Burden Map';
+      } catch {}
+    </script>
   </body>
 </html>

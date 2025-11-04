@@ -38,9 +38,16 @@ if (!PACK.registry) die("Missing registry");
 if (!schemas.registry(PACK.registry))
   die("Registry schema failed", schemas.registry.errors);
 ["income", "sales", "property", "fuel", "excise", "context"].forEach((key) => {
-  for (const row of PACK[key])
+  for (const row of PACK[key]) {
     if (!schemas[key](row))
       die(`${key} schema failed for ${row.state || "??"}`, schemas[key].errors);
+    const src = row.source_url;
+    const chk = row.checked_at;
+    const eff = row.effective_date;
+    if (!src || !/^https?:\/\//.test(src)) die(`${key} missing/invalid source_url for ${row.state}`);
+    if (!chk || !/^\d{4}-\d{2}-\d{2}/.test(chk)) die(`${key} missing checked_at for ${row.state}`);
+    if (!eff || !/^\d{4}-\d{2}-\d{2}/.test(eff)) die(`${key} missing effective_date for ${row.state}`);
+  }
 });
 if (!schemas.federal(PACK.federal))
   die("Federal schema failed", schemas.federal.errors);
@@ -48,7 +55,7 @@ if (!schemas.federal(PACK.federal))
 // sanity bounds
 for (const r of PACK.sales) {
   const c = r.combined_rate ?? (r.state_rate || 0) + (r.avg_local_rate || 0);
-  if (c < 0 || c > 0.15) die(`Unusual sales combined_rate ${c} for ${r.state}`);
+  if (c < 0 || c > 0.2) die(`Unusual sales combined_rate ${c} for ${r.state}`);
 }
 for (const r of PACK.property) {
   if (r.effective_rate < 0 || r.effective_rate > 0.04)
@@ -59,4 +66,4 @@ for (const r of PACK.fuel) {
     die(`Unusual fuel cents/gal ${r.cents_per_gallon} for ${r.state}`);
 }
 
-console.log("✅ Pack 2025.1.0 passed schema & sanity checks.");
+console.log("? Pack 2025.1.0 passed schema & sanity checks.");

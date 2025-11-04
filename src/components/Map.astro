@@ -76,6 +76,10 @@ if (import.meta.env.SSR) {
 
 const selBadge = root.querySelector('#map-selected');
 
+// Normalize any garbled control glyphs at runtime (defensive against encoding issues)
+const _outBtn = root.querySelector('#map-zoom-out'); if (_outBtn) _outBtn.textContent = '−';
+const _rstBtn = root.querySelector('#map-reset');   if (_rstBtn) _rstBtn.textContent = '↺';
+
 // Minimal FIPS → code map so the badge shows 'CA' instead of '06'
 const FIPS_TO_CODE = {
   '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT',

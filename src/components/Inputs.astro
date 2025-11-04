@@ -86,19 +86,42 @@
 (function () {
   const $ = (id) => document.getElementById(id);
 
-  // ---- URL helpers ----------------------------------------------------------
-  function getURL() { try { return new URL(window.location.href); } catch { return null; } }
-  function readParam(name) {
-    const u = getURL(); if (!u) return null;
-    return u.searchParams.get(name);
+  // --- Local URL helpers (avoid inline import issues) ------------------------
+  function currentURL(){ try { return new URL(window.location.href); } catch { return null; } }
+  function readInputsFromURL(u){
+    const gp = (k) => u.searchParams.get(k);
+    const pnum = (v) => Number(String(v||'').replace(/[^0-9.-]/g,'')) || 0;
+    return {
+      filingStatus: gp('fs') || 'single',
+      income: gp('inc') ? pnum(gp('inc')) : 60000,
+      homeowner: (gp('ho') ?? '1') === '1',
+      homeValue: gp('hv') ? pnum(gp('hv')) : 300000,
+      miles: gp('mi') ? +gp('mi') : 12000,
+      mpg: gp('mpg') ? +gp('mpg') : 28,
+      spendingShare: gp('ss') ? +gp('ss') : 0.6,
+      taxableShare: gp('ts') ? +gp('ts') : 0.55,
+      cigPacksPerWeek: gp('cig') ? +gp('cig') : 0,
+      alcoholUnitsPerWeek: gp('alc') ? +gp('alc') : 0,
+      includeFederal: (gp('fed') ?? '0') === '1',
+      ltcg: gp('ltcg') ? pnum(gp('ltcg')) : 0,
+    };
   }
-  function writeParams(pairs) {
-    const u = getURL(); if (!u) return;
-    for (const [k, v] of pairs) {
-      if (v === null || v === undefined || v === '') u.searchParams.delete(k);
-      else u.searchParams.set(k, String(v));
-    }
-    history.replaceState({}, '', u);
+  function writeInputsToURL(u, i){
+    const sp = u.searchParams;
+    const set = (k, v) => { if (v==null || v==='' || v===0) sp.delete(k); else sp.set(k, String(v)); };
+    set('fs', i.filingStatus);
+    set('inc', i.income|0);
+    set('ho', i.homeowner ? '1' : '0');
+    set('hv', i.homeValue|0);
+    set('mi', i.miles);
+    set('mpg', i.mpg);
+    set('ss', i.spendingShare);
+    set('ts', i.taxableShare);
+    set('cig', i.cigPacksPerWeek || null);
+    set('alc', i.alcoholUnitsPerWeek || null);
+    set('fed', i.includeFederal ? '1' : '0');
+    set('ltcg', i.ltcg || null);
+    return u;
   }
 
   // ---- Number formatting + caret-preserving parser --------------------------
@@ -106,12 +129,12 @@
     if (v == null) return 0;
     return Number(String(v).replace(/[^0-9.-]/g, '')) || 0;
   }
-  const nf = new Intl.NumberFormat();
+  const nf = new Intl.NumberFormat('en-US');
   function fmtNum(n){ return nf.format(n|0); }
 
   function attachLiveFormatter(inputEl) {
     if (!inputEl) return;
-    inputEl.addEventListener('input', (e) => {
+    const handler = (e) => {
       const el = e.target;
       const start = el.selectionStart;
       const before = el.value.slice(0, start);
@@ -125,25 +148,40 @@
         if (/[0-9]/.test(el.value[pos])) seen++;
         pos++;
       }
-      el.setSelectionRange(pos, pos);
-    });
+      try { el.setSelectionRange(pos, pos); } catch {}
+    };
+    inputEl.addEventListener('input', handler);
+    inputEl.addEventListener('keyup', handler);
+    inputEl.addEventListener('change', handler);
+
+    // Extra: while focused, enforce formatting every frame to survive other
+    // scripts tweaking value order. Stops on blur.
+    let running = false;
+    const tick = () => {
+      if (!running) return;
+      const el = inputEl;
+      const raw = parseNum(el.value);
+      const formatted = raw ? fmtNum(raw) : '';
+      if (el.value !== formatted) {
+        const start = el.selectionStart;
+        const before = el.value.slice(0, start);
+        const offsetDigits = (before.match(/[0-9]/g) || []).length;
+        el.value = formatted;
+        let seen=0,pos=0; while(pos<el.value.length && seen<offsetDigits){ if(/[0-9]/.test(el.value[pos])) seen++; pos++; }
+        try { el.setSelectionRange(pos,pos); } catch {}
+      }
+      requestAnimationFrame(tick);
+    };
+    inputEl.addEventListener('focus', () => { if (!running) { running = true; requestAnimationFrame(tick); } });
+    inputEl.addEventListener('blur',  () => { running = false; });
   }
 
   // ---- Initialize controls from URL (fallback to current DOM defaults) ------
-  const init = {
-    filingStatus:         readParam('fs')   || $('fs')?.value || 'single',
-    income:               readParam('inc')  ? parseNum(readParam('inc'))  : parseNum($('inc')?.value),
-    homeowner:            (readParam('ho') ?? $('ho')?.value ?? '1') === '1',
-    homeValue:            readParam('hv')   ? parseNum(readParam('hv'))   : parseNum($('hv')?.value),
-    miles:                readParam('mi')   ? +readParam('mi')   : +($('mi')?.value || 0),
-    mpg:                  readParam('mpg')  ? +readParam('mpg')  : +($('mpg')?.value || 1),
-    spendingShare:        readParam('ss')   ? +readParam('ss')   : +($('ss')?.value || 0.60),
-    taxableShare:         readParam('ts')   ? +readParam('ts')   : +($('ts')?.value || 0.55),
-    cigPacksPerWeek:      readParam('cig')  ? +readParam('cig')  : +($('cig')?.value || 0),
-    alcoholUnitsPerWeek:  readParam('alc')  ? +readParam('alc')  : +($('alc')?.value || 0),
-    includeFederal:       (readParam('fed') ?? $('fed')?.value ?? '0') === '1',
-    ltcg:                 readParam('ltcg') ? parseNum(readParam('ltcg')) : parseNum($('ltcg')?.value || '0'),
-  };
+  const init = (()=>{ const u = currentURL(); return u ? readInputsFromURL(u) : {
+    filingStatus: 'single', income: 60000, homeowner:true, homeValue:300000,
+    miles:12000, mpg:28, spendingShare:0.6, taxableShare:0.55, cigPacksPerWeek:0, alcoholUnitsPerWeek:0,
+    includeFederal:false, ltcg:0
+  }; })();
 
   // Push URL-derived values into controls (so UI reflects URL on first paint)
   if ($('fs'))  $('fs').value  = init.filingStatus;
@@ -166,20 +204,9 @@
 
   // ---- Emit helper (updates URL, then notifies listeners) -------------------
   function emit() {
-    writeParams([
-      ['fs',  state.filingStatus],
-      ['inc', state.income|0],
-      ['ho',  state.homeowner ? '1' : '0'],
-      ['hv',  state.homeValue|0],
-      ['mi',  state.miles],
-      ['mpg', state.mpg],
-      ['ss',  state.spendingShare],
-      ['ts',  state.taxableShare],
-      [ 'cig', state.cigPacksPerWeek ? state.cigPacksPerWeek : null ],
-      [ 'alc', state.alcoholUnitsPerWeek ? state.alcoholUnitsPerWeek : null ],
-      ['fed', state.includeFederal ? '1' : '0'],
-      [ 'ltcg', state.ltcg ? (state.ltcg|0) : null ],
-    ]);
+    const cu = currentURL(); if (!cu) return;
+    const u = writeInputsToURL(cu, state);
+    history.replaceState({}, '', u);
     // Microtask so live-formatters settle before recompute
     queueMicrotask(() => {
       window.dispatchEvent(new CustomEvent('t1:inputs', { detail: { ...state } }));
@@ -200,6 +227,8 @@
         <button type="button" data-val="0" aria-pressed="${sel.value==='0'}">No</button>
       </div>
     `;
+    // Hide the original select to avoid duplicate controls (kept in DOM for a11y/fallback)
+    try { sel.style.display = 'none'; } catch {}
 
     container.addEventListener('click', (ev) => {
       const btn = ev.target.closest('button[data-val]');
@@ -256,6 +285,27 @@
   if (incEl) incEl.value = fmtNum(state.income);
   if (hvEl)  hvEl.value  = fmtNum(state.homeValue);
   if (ltcgEl)ltcgEl.value= fmtNum(state.ltcg);
+  // Kick a microtask/RAF pass to ensure formatting has the last word
+  requestAnimationFrame(() => {
+    if (incEl) incEl.dispatchEvent(new Event('input', { bubbles:false }));
+    if (hvEl)  hvEl.dispatchEvent(new Event('input', { bubbles:false }));
+    if (ltcgEl)ltcgEl.dispatchEvent(new Event('input', { bubbles:false }));
+  });
   emit();
+
+  // Defensive: capture-level formatter for dollar inputs to ensure commas even
+  // if any other listener interferes. Also keeps instant recompute in sync.
+  document.addEventListener('input', (ev) => {
+    const el = ev.target;
+    if (!(el && el.id && (el.id==='inc' || el.id==='hv' || el.id==='ltcg'))) return;
+    const start = el.selectionStart;
+    const before = el.value.slice(0, start);
+    const offsetDigits = (before.match(/[0-9]/g) || []).length;
+    const raw = parseNum(el.value);
+    el.value = raw ? fmtNum(raw) : '';
+    let seen = 0, pos = 0;
+    while (pos < el.value.length && seen < offsetDigits) { if (/[0-9]/.test(el.value[pos])) seen++; pos++; }
+    try { el.setSelectionRange(pos, pos); } catch {}
+  }, true);
 })();
 </script>

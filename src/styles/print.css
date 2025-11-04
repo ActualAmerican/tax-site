@@ -3,6 +3,18 @@
     background: #fff;
     color: #111;
   }
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 6px 12px;
+    border-top: 1px solid #ccc;
+    font-size: 11px;
+    color: #444;
+    background: #fff;
+  }
+  .page-break { page-break-before: always; }
   .no-print {
     display: none !important;
   }

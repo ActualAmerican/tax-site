@@ -1,0 +1,44 @@
+name: Compose Pack
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 6 * * 1'  # weekly Monday 06:00 UTC
+
+jobs:
+  build-pack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Run fetchers (offline-friendly)
+        run: |
+          node scripts/fetch/fetch_income.mjs || true
+          node scripts/fetch/fetch_sales.mjs || true
+          node scripts/fetch/fetch_property.mjs || true
+          node scripts/fetch/fetch_fuel.mjs || true
+          node scripts/fetch/fetch_excise.mjs || true
+          node scripts/fetch/fetch_federal.mjs || true
+      - name: Compose and validate
+        run: |
+          node scripts/build_pack.mjs
+          node scripts/validate/validate-pack.mjs
+          node scripts/diff_pack.mjs || true
+      - name: Commit composed pack if changed
+        run: |
+          git config user.name 'pack-bot'
+          git config user.email 'pack-bot@users.noreply.github.com'
+          git add data/packs/*.composed.json public/pack/latest.json
+          if ! git diff --cached --quiet; then
+            TS=$(date -u +"%Y%m%dT%H%M%SZ")
+            git commit -m "chore(pack): composed ${TS}"
+            git tag -f "pack-${TS}"
+            git push --follow-tags
+          else
+            echo "No pack changes"
+          fi

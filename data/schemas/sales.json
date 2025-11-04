@@ -1,13 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["state", "year"],
+  "required": ["state", "year", "combined_rate", "source_url", "checked_at", "effective_date"],
   "properties": {
     "state": { "type": "string", "minLength": 2, "maxLength": 2 },
     "year": { "type": "integer" },
-    "state_rate": { "type": "number" },
-    "avg_local_rate": { "type": "number" },
-    "combined_rate": { "type": "number" }
+    "state_rate": { "type": "number", "minimum": 0, "maximum": 0.15 },
+    "avg_local_rate": { "type": "number", "minimum": 0, "maximum": 0.15 },
+    "combined_rate": { "type": "number", "minimum": 0, "maximum": 0.2 },
+    "source_url": { "type": "string", "minLength": 8 },
+    "checked_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}" },
+    "effective_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}" },
+    "notes": { "type": "string" }
   },
   "additionalProperties": true
 }

@@ -45,6 +45,7 @@ const slot = compareSlot ?? 'solo';
       </tr>
     </tfoot>
   </table>
+  <div id="bd-error" class="panel error no-print" hidden></div>
 </div>
 
 <!-- Client: listens for state & inputs, renders rows, stacked bar, and manages toolbar -->
@@ -63,6 +64,11 @@ const slot = compareSlot ?? 'solo';
     _tbody.innerHTML = '<tr class="loading"><td colspan="3">Loading latest tax data…</td></tr>';
   }
   setLoadingRow();
+  // Defensively normalize the loading text if encoding was garbled
+  try {
+    const _cell = _tbody && _tbody.querySelector('.loading td');
+    if (_cell) _cell.textContent = 'Loading latest tax data…';
+  } catch {}
 
   const slot       = root.getAttribute('data-slot') || 'solo';
   const stateLabel = root.querySelector('#bd-state');
@@ -73,6 +79,11 @@ const slot = compareSlot ?? 'solo';
   const chipTotal  = root.querySelector('#chip-total');
   const chipEff    = root.querySelector('#chip-eff');
   const barEl      = root.querySelector('#chart');
+
+  // Normalize any garbled glyphs in static markup
+  if (compareLink) compareLink.textContent = 'Compare…';
+  if (chipTotal && (!chipTotal.textContent || /[^\w$%]/.test(chipTotal.textContent))) chipTotal.textContent = '—';
+  if (chipEff   && (!chipEff.textContent   || /[^\w$%]/.test(chipEff.textContent)))   chipEff.textContent   = '—';
 
   // FIPS → USPS map
   const FIPS_TO_CODE = {
@@ -132,6 +143,15 @@ const slot = compareSlot ?? 'solo';
     } catch (err) {
       console.warn('Breakdown: failed to load pack', err);
       _packCache = null;
+      try {
+        const b = root.querySelector('#bd-error');
+        if (b) {
+          b.removeAttribute('hidden');
+          b.textContent = 'Failed to load tax data. Retry?';
+          const btn = document.createElement('button'); btn.textContent = 'Retry'; btn.className='badge'; btn.onclick = () => { b.setAttribute('hidden',''); setLoadingRow(); _packCache=null; computeDemoBreakdown(root.getAttribute('data-state')||'CA'); };
+          b.appendChild(document.createTextNode(' ')); b.appendChild(btn);
+        }
+      } catch {}
       return null;
     }
   }
@@ -145,7 +165,7 @@ const slot = compareSlot ?? 'solo';
     if (!r) return true;
     if (r.__stub === true || r.stub === true) return true;
     if (kind === 'income') {
-      if (r.has_income_tax === false) return true;
+      if (r.has_income_tax === false) return false;
       const hasBrackets = Array.isArray(r.brackets) && r.brackets.length > 0;
       const hasFlat = typeof r.flat === 'number';
       return !(hasBrackets || hasFlat);
@@ -450,6 +470,17 @@ const slot = compareSlot ?? 'solo';
     const stateDisplay   = toDisplay(stateNumeric);
     const federalDisplay = toDisplay(federalNumeric);
 
+    // Normalize any placeholder/dash output to concrete zeros for MVP (no dashes)
+    function normalizeDisplay(arr){
+      return arr.map(r => ({
+        ...r,
+        amount: (typeof r.amount === 'string' && r.amount.indexOf('\uFFFD') >= 0) ? '$0' : r.amount,
+        pct:    (typeof r.pct    === 'string' && r.pct.indexOf('\uFFFD')    >= 0) ? '0.0%' : r.pct,
+      }));
+    }
+    const stateDisplayNorm   = normalizeDisplay(stateDisplay);
+    const federalDisplayNorm = normalizeDisplay(federalDisplay);
+
     // Update chips + table
     const totEl = root.querySelector('#tot');
     const effEl = root.querySelector('#eff');
@@ -460,8 +491,8 @@ const slot = compareSlot ?? 'solo';
     if (chipEff)   chipEff.textContent   = effEl ? effEl.textContent : effRateStr;
 
     renderBreakdownRows(
-      stateDisplay,
-      federalDisplay,
+      stateDisplayNorm,
+      federalDisplayNorm,
       { state: { amount: fmt(stateSum), pct: pctOf(stateSum,total) }, federal: { amount: fmt(fedSum), pct: pctOf(fedSum,total) } }
     );
 
@@ -559,6 +590,31 @@ const slot = compareSlot ?? 'solo';
     const cur = root.getAttribute('data-state') || stateLabel?.textContent || 'CA';
     requestAnimationFrame(() => computeDemoBreakdown(cur));
   });
+
+  // Fallback: recompute on any input/change events from the inputs form to
+  // guarantee instant updates even if the custom event path is interrupted.
+  (function ensureInstantRecompute() {
+    const form = document.querySelector('form[aria-label="Tax inputs"]');
+    if (!form) return;
+    const capture = () => {
+      try {
+        const get = (id) => form.querySelector('#' + id);
+        const parse = (v) => Number(String(v||'').replace(/[^0-9.-]/g,'')) || 0;
+        latestInputs.income         = get('inc')  ? parse(get('inc').value)  : latestInputs.income;
+        latestInputs.homeValue      = get('hv')   ? parse(get('hv').value)   : latestInputs.homeValue;
+        latestInputs.homeowner      = get('ho')   ? (get('ho').value === '1') : latestInputs.homeowner;
+        latestInputs.filingStatus   = get('fs')   ? (get('fs').value || 'single') : latestInputs.filingStatus;
+        latestInputs.spendingShare  = get('ss')   ? (+get('ss').value)           : latestInputs.spendingShare;
+        latestInputs.taxableShare   = get('ts')   ? (+get('ts').value)           : latestInputs.taxableShare;
+        latestInputs.includeFederal = get('fed')  ? (get('fed').value === '1')   : latestInputs.includeFederal;
+        latestInputs.ltcg           = get('ltcg') ? parse(get('ltcg').value)     : latestInputs.ltcg;
+      } catch {}
+      const cur = root.getAttribute('data-state') || stateLabel?.textContent || 'CA';
+      requestAnimationFrame(() => computeDemoBreakdown(cur));
+    };
+    form.addEventListener('input', capture, { passive: true });
+    form.addEventListener('change', capture);
+  })();
 
   // Compare slots support
   window.addEventListener('t1:state-left',  (e) => { if (slot === 'left')  updateState(e.detail); });

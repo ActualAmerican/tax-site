@@ -117,5 +117,21 @@ const eff = total / Math.max(1, inputs.income);
       </ul>
       <p class="muted-note">Transparent approximations; official instructions may differ. No PII stored.</p>
     </main>
+    <script type="module">
+      try {
+        document.title = `T1 Report — ${'${state}'}`;
+        const h1 = document.querySelector('h1.title-reset'); if (h1) h1.textContent = `T1 — ${'${state}'} Tax Report`;
+        const hdr = document.querySelector('.header--space div'); if (hdr) hdr.textContent = `Pack ${'${pack.registry.pack_version}'} — ${'${pack.registry.built_at}'}`;
+        const items = document.querySelectorAll('ul li');
+        items.forEach(li => { li.textContent = li.textContent.replace(' checked ', ' — checked '); });
+        // Ensure footer exists
+        let f = document.querySelector('.print-footer');
+        if (!f) {
+          f = document.createElement('footer'); f.className = 'print-footer';
+          f.textContent = `T1 — Pack ${'${pack.registry.pack_version}'} — ${'${pack.registry.built_at}'} — ${'${state}'}`;
+          document.body.appendChild(f);
+        }
+      } catch {}
+    </script>
   </body>
 </html>

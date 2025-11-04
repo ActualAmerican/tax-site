@@ -50,3 +50,18 @@ base.registry.hash = hash;
 fs.writeFileSync(OUT, JSON.stringify(base, null, 2));
 console.log(`Wrote composed pack to ${OUT}`);
 console.log(`hash: ${hash}`);
+
+// Also emit a lightweight public/pack/latest.json for the app and monitoring
+try {
+  const pubDir = path.resolve('public/pack');
+  fs.mkdirSync(pubDir, { recursive: true });
+  const latest = {
+    version: base.registry?.pack_version,
+    built_at: base.registry?.built_at,
+    hash: base.registry?.hash,
+  };
+  fs.writeFileSync(path.join(pubDir, 'latest.json'), JSON.stringify(latest, null, 2));
+  console.log(`Updated ${path.join('public/pack','latest.json')}`);
+} catch (e) {
+  console.warn('Could not write public/pack/latest.json', e);
+}
