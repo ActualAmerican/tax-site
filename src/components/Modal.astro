@@ -25,6 +25,8 @@ import "../styles/utilities.css";
     title.textContent = detail.title || 'Chart';
     body.innerHTML    = detail.html  || '';
     root.hidden = false;
+    // focus the close button for keyboard users
+    try { root.querySelector('[data-close]')?.focus(); } catch {}
   }
   function close(){ root.hidden = true; body.innerHTML=''; }
 
@@ -35,5 +37,11 @@ import "../styles/utilities.css";
 
   window.addEventListener('t1:modal-open', (e)=>open(e.detail||{}));
   window.addEventListener('t1:modal-close', close);
+
+  // a11y: ESC or Enter on focused close button closes the modal
+  window.addEventListener('keydown', (e) => {
+    if (root.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); close(); }
+  });
 })();
 </script>

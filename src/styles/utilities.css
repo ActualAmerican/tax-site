@@ -66,6 +66,23 @@ a {
   font-size: 12px;
   color: #555;
 }
+.disclosure > summary::marker { content: ''; }
+.disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+  position: relative;
+  padding-right: 1rem;
+}
+.disclosure[open] > summary::after,
+.disclosure > summary::after {
+  content: '▸';
+  position: absolute;
+  right: 0;
+  color: var(--muted);
+  transform: rotate(0deg);
+  transition: transform 0.15s ease;
+}
+.disclosure[open] > summary::after { transform: rotate(90deg); }
 .big-number {
   font-size: 1.4rem;
 }

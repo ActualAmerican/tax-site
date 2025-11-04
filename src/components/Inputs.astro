@@ -45,7 +45,7 @@
     </div>
   </div>
 
-  <details>
+  <details class="disclosure">
     <summary class="label">Optional excise</summary>
     <div class="grid">
       <div>
@@ -59,7 +59,7 @@
     </div>
   </details>
 
-  <details>
+  <details class="disclosure">
     <summary class="label">Federal options</summary>
     <div class="grid">
             <div>
@@ -253,8 +253,11 @@
   const hvEl  = $('hv');  attachLiveFormatter(hvEl);
   hvEl?.addEventListener('input',   e => { state.homeValue = parseNum(e.target.value); emit(); });
 
-  $('mi')?.addEventListener('input',  e => { state.miles = +e.target.value || 0; emit(); });
-  $('mpg')?.addEventListener('input', e => { state.mpg   = +e.target.value || 1; emit(); });
+  const miEl = $('mi'); attachLiveFormatter(miEl);
+  miEl?.addEventListener('input',  e => { state.miles = +parseNum(e.target.value) || 0; emit(); });
+
+  const mpgEl = $('mpg'); attachLiveFormatter(mpgEl);
+  mpgEl?.addEventListener('input', e => { state.mpg   = +parseNum(e.target.value) || 1; emit(); });
 
   $('ss')?.addEventListener('input',  e => {
     state.spendingShare = +e.target.value;
@@ -291,6 +294,16 @@
     if (hvEl)  hvEl.dispatchEvent(new Event('input', { bubbles:false }));
     if (ltcgEl)ltcgEl.dispatchEvent(new Event('input', { bubbles:false }));
   });
+
+  // Also format immediately from URL without requiring focus/typing
+  (function formatOnLoad(){
+    const fields = [incEl, hvEl, miEl, mpgEl, ltcgEl];
+    for (const el of fields) {
+      if (!el) continue;
+      const raw = parseNum(el.value);
+      el.value = raw ? fmtNum(raw) : '';
+    }
+  })();
   emit();
 
   // Defensive: capture-level formatter for dollar inputs to ensure commas even

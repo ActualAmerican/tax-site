@@ -1,4 +1,4 @@
----
+﻿---
 const { pack } = Astro.props;
 ---
 
@@ -6,14 +6,29 @@ const { pack } = Astro.props;
   <details open>
     <summary class="label"><strong>Assumptions & sources</strong></summary>
     <div class="stack stack--muted">
-      <div>Pack: <strong>{pack.registry.pack_version}</strong> • Built: {pack.registry.built_at}</div>
+      <div>Pack: <strong>{pack.registry.pack_version}</strong> — Built: {pack.registry.built_at}</div>
       <div>Registry sources:</div>
       <ul>
         {pack.registry.sources.map((s) => (
-          <li>{s.metric}{s.state?` (${s.state})`:''}: <a href={s.url} target="_blank" rel="noopener noreferrer">{s.url}</a> — checked {s.checked_at}</li>
+          <li>{s.metric}{s.state?` (${s.state})`:''}: <a href={s.url} target="_blank" rel="noopener noreferrer">{s.url}</a> â€” checked {s.checked_at}</li>
         ))}
+      </ul>
+      <div><strong>Notes</strong></div>
+      <ul>
+        {pack.federal ? (
+          <>
+            <li>IRS {pack.federal.year}: brackets + standard deduction (Single/Married).</li>
+            <li>SSA wage base: ${pack.federal.ssa?.wage_base?.toLocaleString?.() ?? pack.federal.ssa?.wage_base}</li>
+            <li>Medicare: base rate {((pack.federal.medicare?.rate||0)*100).toFixed(2)}%; +0.9% above thresholds (by filing status).</li>
+          </>
+        ) : null}
+        <li>Sales: combined = state + average local rate.</li>
+        <li>Property: statewide average effective rate × home value.</li>
+        <li>Fuel: cents per gallon → dollars using miles ÷ MPG.</li>
+        <li>Excise: cigarettes/alcohol rows default to 0 when not provided.</li>
       </ul>
       <p>Models: state income, sales, property, fuel, excise; optional federal income, payroll, LTCG (simplified per spec).</p>
     </div>
   </details>
 </div>
+

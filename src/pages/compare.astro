@@ -190,6 +190,29 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
           });
         }
 
+        // Add subtotals and total rows
+        const stL = snapL.totals?.stateSubtotal || 0;
+        const stR = snapR.totals?.stateSubtotal || 0;
+        const fdL = snapL.totals?.federalSubtotal || 0;
+        const fdR = snapR.totals?.federalSubtotal || 0;
+        const ttL = snapL.totals?.total || 0;
+        const ttR = snapR.totals?.total || 0;
+        const pushRow = (label, lv, rv) => {
+          const diff = rv - lv; const dp = (lv===0)? null : (diff/lv);
+          rows.push({
+            label,
+            left: money(lv),
+            right: money(rv),
+            diffClass: diff > 0 ? 'diff-neg' : (diff < 0 ? 'diff-pos' : 'muted'),
+            diff: money(diff),
+            diffPct: (dp==null) ? '—' : ((dp*100).toFixed(1)+'%')
+          });
+        };
+        pushRow('State subtotal', stL, stR);
+        if ((snapL.inputs?.includeFederal || snapR.inputs?.includeFederal))
+          pushRow('Federal subtotal', fdL, fdR);
+        pushRow('Total', ttL, ttR);
+
         tbody.innerHTML = rows.map(r => `
           <tr>
             <td>${r.label}</td>
@@ -270,6 +293,7 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
           statusEl.textContent = ok ? 'Link copied!' : 'Copy failed';
           setTimeout(() => (statusEl.textContent = ''), 1800);
         }
+        try { (await import('../lib/analytics.ts')).track('copy_link', { page: 'compare' }); } catch {}
       }
       copyBtn?.addEventListener('click', copyShare);
 

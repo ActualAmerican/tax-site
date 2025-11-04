@@ -1,4 +1,4 @@
----
+﻿---
 import '../styles/tokens.css';
 import '../styles/utilities.css';
 import Map from '../components/Map.astro';
@@ -34,7 +34,7 @@ import Modal from '../components/Modal.astro';
     <main class="container grid grid--sidebar">
       <section class="panel stack">
         <h1 class="heading--tight">T1 — State + Federal Tax Burden Map</h1>
-        <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> • built {pack.registry.built_at}</div>
+        <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> â€¢ built {pack.registry.built_at}</div>
 
         <Inputs id="inputs" />
         <Assumptions pack={pack} />
@@ -51,7 +51,7 @@ import Modal from '../components/Modal.astro';
         const t = document.querySelector('h1.heading--tight');
         if (t) t.textContent = 'T1 — State + Federal Tax Burden Map';
         const badge = document.querySelector('.badge');
-        if (badge) badge.innerHTML = badge.innerHTML.replace(/built.*/, (m)=>m.replace(/.+?built/,' — built'));
+        if (badge) badge.innerHTML = badge.innerHTML.replace(/built.*/, (m)=>m.replace(/.+?built/,' â€” built'));
         const og = document.querySelector('meta[property="og:title"]');
         if (og) og.setAttribute('content','T1 — State + Federal Tax Burden Map');
         document.title = 'T1 — State + Federal Tax Burden Map';
@@ -59,3 +59,4 @@ import Modal from '../components/Modal.astro';
     </script>
   </body>
 </html>
+

@@ -1,4 +1,4 @@
----
+﻿---
 /* Breakdown panel (bundled module import) */
 const { initialState = 'CA', compareSlot } = Astro.props;
 const slot = compareSlot ?? 'solo';
@@ -13,13 +13,13 @@ const slot = compareSlot ?? 'solo';
   <div class="header--space">
     <div class="stack--row">
       <strong>Breakdown</strong>
-      <span id="bd-state" class="badge">{initialState}</span>
-      <span class="chip" id="chip-total">—</span>
-      <span class="chip" id="chip-eff">—</span>
+      <span id="bd-state" class="badge" role="status" aria-live="polite">{initialState}</span>
+      <span class="chip" id="chip-total">â€”</span>
+      <span class="chip" id="chip-eff">â€”</span>
     </div>
     <div class="toolbar">
       <a class="badge" id="bd-export" href={`/report?state=${initialState}`}>Export PDF</a>
-      <a class="badge" id="bd-compare" href={`/compare?a=${initialState}`}>Compare…</a>
+      <a class="badge" id="bd-compare" href={`/compare?a=${initialState}`}>Compareâ€¦</a>
       <button class="badge" id="bd-pie" type="button" title="Open pie chart">Open chart</button>
       <button class="badge" id="bd-copy" type="button">Copy link</button>
     </div>
@@ -61,13 +61,13 @@ const slot = compareSlot ?? 'solo';
   const _tbody = root.querySelector('tbody');
   function setLoadingRow() {
     if (!_tbody) return;
-    _tbody.innerHTML = '<tr class="loading"><td colspan="3">Loading latest tax data…</td></tr>';
+    _tbody.innerHTML = '<tr class="loading"><td colspan="3">Loading latest tax dataâ€¦</td></tr>';
   }
   setLoadingRow();
   // Defensively normalize the loading text if encoding was garbled
   try {
     const _cell = _tbody && _tbody.querySelector('.loading td');
-    if (_cell) _cell.textContent = 'Loading latest tax data…';
+    if (_cell) _cell.textContent = 'Loading latest tax dataâ€¦';
   } catch {}
 
   const slot       = root.getAttribute('data-slot') || 'solo';
@@ -80,12 +80,25 @@ const slot = compareSlot ?? 'solo';
   const chipEff    = root.querySelector('#chip-eff');
   const barEl      = root.querySelector('#chart');
 
-  // Normalize any garbled glyphs in static markup
-  if (compareLink) compareLink.textContent = 'Compare…';
-  if (chipTotal && (!chipTotal.textContent || /[^\w$%]/.test(chipTotal.textContent))) chipTotal.textContent = '—';
-  if (chipEff   && (!chipEff.textContent   || /[^\w$%]/.test(chipEff.textContent)))   chipEff.textContent   = '—';
+  // Lightweight analytics hooks (safe no-ops if module missing)
+  try {
+    if (copyBtn) copyBtn.addEventListener('click', async () => {
+      try { (await import('../lib/analytics.ts')).track('copy_link', { page: slot, state: root.getAttribute('data-state') }); } catch {}
+    });
+    if (pieBtn) pieBtn.addEventListener('click', async () => {
+      try { (await import('../lib/analytics.ts')).track('open_chart', { page: slot, state: root.getAttribute('data-state') }); } catch {}
+    });
+    if (exportLink) exportLink.addEventListener('click', async () => {
+      try { (await import('../lib/analytics.ts')).track('export_pdf', { page: slot, state: root.getAttribute('data-state') }); } catch {}
+    });
+  } catch {}
 
-  // FIPS → USPS map
+  // Normalize any garbled glyphs in static markup
+  if (compareLink) compareLink.textContent = 'Compareâ€¦';
+  if (chipTotal && (!chipTotal.textContent || /[^\w$%]/.test(chipTotal.textContent))) chipTotal.textContent = 'â€”';
+  if (chipEff   && (!chipEff.textContent   || /[^\w$%]/.test(chipEff.textContent)))   chipEff.textContent   = 'â€”';
+
+  // FIPS â†’ USPS map
   const FIPS_TO_CODE = {
     '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL','13':'GA',
     '15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD','25':'MA',
@@ -310,6 +323,7 @@ const slot = compareSlot ?? 'solo';
       seg.style.width      = ((s.value / Math.max(1,total)) * 100) + '%';
       seg.style.background = s.color;
       seg.title = `${s.label}: ${fmt(s.value)} (${pctOf(s.value,total)})`;
+      seg.setAttribute('aria-label', `${s.label}: ${fmt(s.value)} (${pctOf(s.value,total)})`);
       barEl.appendChild(seg);
     }
   }
@@ -343,7 +357,7 @@ const slot = compareSlot ?? 'solo';
     const legend = data.map(s => `
       <div class="legend__item">
         <span class="legend__swatch" style="background:${s.color}"></span>
-        <span>${s.label} — <strong>${fmt(s.value)}</strong> (${pctOf(s.value,total)})</span>
+        <span>${s.label} â€” <strong>${fmt(s.value)}</strong> (${pctOf(s.value,total)})</span>
       </div>
     `).join('');
 
@@ -439,7 +453,7 @@ const slot = compareSlot ?? 'solo';
           `OASDI ${(p.ssRate*100).toFixed(1)}%`,
           `Medicare ${(p.mediRate*100).toFixed(2)}%`,
           `+ ${(p.addRate*100).toFixed(1)}% above $${Number(p.addThresh).toLocaleString()}`
-        ].join(' · ');
+        ].join(' Â· ');
       }
     }
 
@@ -463,8 +477,8 @@ const slot = compareSlot ?? 'solo';
     const toDisplay = (arr) => arr.map(r => ({
       key:    r.key,
       label:  r.label,
-      amount: r.value == null ? '—' : fmt(r.value),
-      pct:    r.value == null ? '—' : pctOf(r.value,total),
+      amount: r.value == null ? 'â€”' : fmt(r.value),
+      pct:    r.value == null ? 'â€”' : pctOf(r.value,total),
       title:  r.title
     }));
     const stateDisplay   = toDisplay(stateNumeric);
@@ -573,7 +587,7 @@ const slot = compareSlot ?? 'solo';
     if (slot === 'solo') updateState(s);
   });
 
-  // Inputs changed → recompute current state (next frame)
+  // Inputs changed â†’ recompute current state (next frame)
   window.addEventListener('t1:inputs', (e) => {
     const d = e.detail || {};
     latestInputs.filingStatus   = d.filingStatus   ?? latestInputs.filingStatus;
@@ -631,8 +645,8 @@ const slot = compareSlot ?? 'solo';
 
   // Open chart (pie modal)
   pieBtn?.addEventListener('click', () => {
-    const code = root.getAttribute('data-state') || '—';
-    const html = buildPieHTML(`${code} — tax mix`, _lastSegments);
+    const code = root.getAttribute('data-state') || 'â€”';
+    const html = buildPieHTML(`${code} â€” tax mix`, _lastSegments);
     window.dispatchEvent(new CustomEvent('t1:modal-open', { detail: { title: 'Tax composition', html } }));
   });
 
@@ -647,3 +661,4 @@ const slot = compareSlot ?? 'solo';
   }
 })();
 </script>
+
