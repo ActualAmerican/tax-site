@@ -1,0 +1,71 @@
+---
+const { stateCode = '' } = Astro.props ?? {};
+---
+
+<details class="deadlines" open data-component="tax-deadlines" data-state={stateCode}>
+  <summary>
+    <div class="deadlines__summary">
+      <span class="deadlines__eyebrow">Upcoming tax deadlines</span>
+      <div class="deadlines__actions">
+        <button type="button" class="deadlines__remind" aria-label="Remind me about upcoming deadlines">
+          Remind me
+        </button>
+        <span class="deadlines__toggle">Collapse</span>
+      </div>
+    </div>
+  </summary>
+  <div class="deadlines__body">
+    <div class="deadlines__row">
+      <span class="deadlines__label">Tax Day</span>
+      <span class="deadlines__value">April 15, 2026</span>
+    </div>
+    <div class="deadlines__row">
+      <span class="deadlines__label">Estimated payments</span>
+      <span class="deadlines__value">Jan 15 / Apr 15 / Jun 15 / Sep 15</span>
+    </div>
+    <div class="deadlines__row">
+      <span class="deadlines__label">
+        State deadlines
+        <span class="deadlines__info" aria-hidden="true" title="Dates auto-update once data is connected.">i</span>
+      </span>
+      <span class="deadlines__value" data-deadline-state>
+        Varies - select a state to view
+      </span>
+    </div>
+  </div>
+</details>
+
+<script type="module">
+  (function attachDeadlineState() {
+    const root = document.querySelector('[data-component="tax-deadlines"]');
+    if (!root) return;
+    const stateEl = root.querySelector('[data-deadline-state]');
+
+    function updateState(code) {
+      if (!stateEl) return;
+      stateEl.textContent = code ? `Deadlines highlight: ${code}` : 'Varies - select a state to view';
+    }
+
+    const initialState = root.getAttribute('data-state');
+    if (initialState) updateState(initialState);
+
+    window.addEventListener('t1:state', (event) => {
+      const detail = event.detail || {};
+      updateState(detail.code || '');
+    });
+
+    const remind = root.querySelector('.deadlines__remind');
+    if (remind) {
+      remind.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+      });
+    }
+
+    root.addEventListener('toggle', () => {
+      const toggle = root.querySelector('.deadlines__toggle');
+      if (!toggle) return;
+      toggle.textContent = root.open ? 'Collapse' : 'Expand';
+    });
+  })();
+</script>

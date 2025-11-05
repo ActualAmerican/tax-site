@@ -10,6 +10,8 @@
     "lint:pack": "node scripts/validate/validate-pack.mjs",
     "audit:pack": "node scripts/audit_pack.mjs",
     "pack": "node scripts/build_pack.mjs",
+    "fetch:all": "node scripts/fetch/orchestrate.mjs",
+    "compose": "node scripts/build_pack.mjs && node scripts/validate/validate-pack.mjs && node scripts/diff_pack.mjs",
     "ci:smoke": "node scripts/ci_smoke.mjs"
   },
   "engines": {

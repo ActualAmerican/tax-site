@@ -1,11 +1,11 @@
-﻿---
+---
 import '../../styles/tokens.css';
 import '../../styles/utilities.css';
 import Breakdown from '../../components/Breakdown.astro';
 import Assumptions from '../../components/Assumptions.astro';
 import ContextCards from '../../components/ContextCards.astro';
 import pack from '../../../data/packs/2025.1.0.json';
-
+const packLiteral = JSON.stringify(pack).replace(/</g, '\\u003c');
 export async function getStaticPaths() {
   const METRICS = ['income','sales','property','fuel','excise','context'];
   const states = new Set();
@@ -23,32 +23,42 @@ const s = (code || 'CA').toUpperCase();
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Taxes in {s}, 2025 — T1</title>
+    <title>Taxes in {s}, 2025  -  T1</title>
     <meta name="description" content={`Transparent estimate of ${s} state & local taxes with optional federal layer.`} />
-    <meta property="og:title" content={`Taxes in ${s}, 2025 — T1`} />
+    <meta property="og:title" content={`Taxes in ${s}, 2025  -  T1`} />
     <meta property="og:description" content={`Transparent estimate of ${s} state & local taxes with optional federal layer.`} />
     <link rel="canonical" href={`/state/${s}`} />
     <script type="application/ld+json">{JSON.stringify({
       "@context":"https://schema.org",
       "@type":"WebPage",
-      "name":`Taxes in ${s}, 2025 — T1`,
+      "name":`Taxes in ${s}, 2025  -  T1`,
       "description":`Transparent estimate of ${s} state & local taxes with optional federal layer.`,
       "url":`/state/${s}`
     })}</script>
   </head>
   <body>
+    <script type="module">
+      if (!window.__t1_pack) {
+        window.__t1_pack = ${packLiteral};
+      }
+    </script>
     <main class="container grid grid--sidebar">
       <section class="panel stack">
-        <a href="/" class="badge" aria-label="Back to home">⟵ Home</a>
+        <a href="/" class="badge" aria-label="Back to home">Home</a>
         <h1 class="heading--tight">Taxes in {s}, 2025</h1>
-        <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> — built {pack.registry.built_at}</div>
+        <div class="badge">Pack <strong>{pack.registry.pack_version}</strong>  -  built {pack.registry.built_at}</div>
         <Assumptions pack={pack} />
       </section>
 
       <section class="stack">
-        <Breakdown initialState={s} />
+        <Breakdown initialState={s} pack={pack} />
         <ContextCards pack={pack} initialState={s} />
       </section>
     </main>
   </body>
 </html>
+
+
+
+
+

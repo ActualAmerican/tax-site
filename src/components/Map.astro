@@ -33,12 +33,12 @@ if (import.meta.env.SSR) {
 }
 ---
 <div class="panel" data-t1-map>
-  <div class="label"><strong>US Map</strong><span id="map-selected" class="badge">No state</span></div>
+  <div class="label"><strong>US Map</strong><span id="map-selected" class="badge">--</span></div>
   <!-- Simple map controls: zoom in, zoom out, reset -->
   <div class="map-controls" role="toolbar" aria-label="Map controls">
     <button id="map-zoom-in" type="button" class="map-control-btn" aria-label="Zoom in" title="Zoom in">+</button>
-    <button id="map-zoom-out" type="button" class="map-control-btn" aria-label="Zoom out" title="Zoom out">−</button>
-    <button id="map-reset" type="button" class="map-control-btn" aria-label="Reset view" title="Reset view">⤢</button>
+    <button id="map-zoom-out" type="button" class="map-control-btn" aria-label="Zoom out" title="Zoom out">-</button>
+    <button id="map-reset" type="button" class="map-control-btn" aria-label="Reset view" title="Reset view">R</button>
   </div>
   <svg
     width="100%"
@@ -75,12 +75,13 @@ if (import.meta.env.SSR) {
   try { console.log('initMapClient', { href: location.href }); } catch (e) {}
 
 const selBadge = root.querySelector('#map-selected');
+if (selBadge) selBadge.textContent = '--';
 
 // Normalize any garbled control glyphs at runtime (defensive against encoding issues)
-const _outBtn = root.querySelector('#map-zoom-out'); if (_outBtn) _outBtn.textContent = '−';
-const _rstBtn = root.querySelector('#map-reset');   if (_rstBtn) _rstBtn.textContent = '↺';
+const _outBtn = root.querySelector('#map-zoom-out'); if (_outBtn) _outBtn.textContent='-';
+const _rstBtn = root.querySelector('#map-reset');   if (_rstBtn) _rstBtn.textContent='R';
 
-// Minimal FIPS → code map so the badge shows 'CA' instead of '06'
+// Minimal FIPS code map so the badge shows 'CA' instead of '06'
 const FIPS_TO_CODE = {
   '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT',
   '10':'DE','11':'DC','12':'FL','13':'GA','15':'HI','16':'ID','17':'IL',
@@ -101,60 +102,113 @@ function fipsToCode(f) {
 // --- Selection & deep-link helpers ---
 let selectedFips = null;
 
-function selectState(fips, { emit = true, push = false } = {}) {
-  if (!fips) return;
+function emitStateDetail(fips) {
+  const detail = fips ? { fips, code: fipsToCode(fips) || null } : null;
+  window.dispatchEvent(new CustomEvent('t1:state', { detail }));
+}
 
-  // Toggle CSS class
-  if (selectedFips) {
-    const prev = svg.querySelector(`.state[data-fips="${selectedFips}"]`);
+function updateBadge(fips) {
+  if (!selBadge) return;
+  if (!fips) {
+    selBadge.textContent = '--';
+    return;
+  }
+  const code = fipsToCode(fips);
+  selBadge.textContent = code || fips;
+}
+
+function updateHistory(fips, push) {
+  try {
+    const url = new URL(location.href);
+    if (fips) {
+      url.searchParams.set('fips', fips);
+    } else {
+      url.searchParams.delete('fips');
+    }
+    const statePayload = fips ? { fips } : {};
+    if (push) {
+      history.pushState(statePayload, '', url);
+    } else {
+      history.replaceState(statePayload, '', url);
+    }
+  } catch {}
+}
+
+function clearSelection({ emit = true, push = false } = {}) {
+  const prevFips = selectedFips;
+  if (prevFips) {
+    const prev = svg.querySelector(`.state[data-fips=\"${prevFips}\"]`);
     if (prev) prev.classList.remove('state--selected');
   }
-  const next = svg.querySelector(`.state[data-fips="${fips}"]`);
-  if (next) next.classList.add('state--selected');
+  selectedFips = null;
+  updateBadge(null);
+  let hadParam = false;
+  try {
+    hadParam = new URL(location.href).searchParams.has('fips');
+  } catch {}
+  if (prevFips || hadParam) {
+    updateHistory(null, push);
+  }
+  if (emit) emitStateDetail(null);
+}
+
+function selectState(fips, { emit = true, push = false } = {}) {
+  if (!fips) {
+    clearSelection({ emit, push });
+    return;
+  }
+
+  const next = svg.querySelector(`.state[data-fips=\"${fips}\"]`);
+  if (!next) {
+    try { console.warn('selectState: path not found', fips); } catch (e) {}
+    return;
+  }
+
+  if (selectedFips && selectedFips !== fips) {
+    const prev = svg.querySelector(`.state[data-fips=\"${selectedFips}\"]`);
+    if (prev) prev.classList.remove('state--selected');
+  }
+
   selectedFips = fips;
+  next.classList.add('state--selected');
+  updateBadge(fips);
 
-// Update the badge text ("CA" or fallback to the FIPS)
-const code = fipsToCode(fips);
-if (selBadge) selBadge.textContent = code || fips;
-
-  try { console.log('selectState', { fips, code }); } catch (e) {}
-  // Ensure selected state is rendered above other shapes so its stroke is visible
+  try { console.log('selectState', { fips, code: fipsToCode(fips) || null }); } catch (e) {}
   try {
     const group = svg.querySelector('#mapGroup');
     if (group && next) group.appendChild(next);
   } catch (e) {}
 
-  // Update URL (?fips=XX) without reload
-  try {
-    const url = new URL(location.href);
-    url.searchParams.set('fips', fips);
-    if (push) {
-      history.pushState({ fips }, '', url);
-    } else {
-      history.replaceState({ fips }, '', url);
-    }
-  } catch {}
+  updateHistory(fips, push);
 
-  // Notify listeners
-  if (emit) {
-    window.dispatchEvent(new CustomEvent('t1:state', { detail: fips }));
-  }
+  if (emit) emitStateDetail(fips);
 }
 
-// Apply selection from URL on load
+// Apply selection from URL on load (or enforce a neutral state)
 (function applyInitialSelection() {
   try {
     const url = new URL(location.href);
     const f = url.searchParams.get('fips');
-    if (f) selectState(f, { emit: true, push: false });
-  } catch {}
+    if (f) {
+      selectState(f, { emit: true, push: false });
+      return;
+    }
+  } catch (err) {
+    try { console.warn('map: failed to read initial fips', err); } catch (e) {}
+  }
+  clearSelection({ emit: true, push: false });
 })();
 
 // React to back/forward navigation
 window.addEventListener('popstate', (e) => {
   const f = (e.state && e.state.fips) || (new URL(location.href)).searchParams.get('fips');
-  if (f) selectState(f, { emit: true, push: false });
+  if (f) {
+    selectState(f, { emit: true, push: false });
+  } else {
+    clearSelection({ emit: true, push: false });
+  }
 });
+
 
     // --- Click handlers (per-path + delegated fallback) ---
 
@@ -184,7 +238,7 @@ window.addEventListener('popstate', (e) => {
             }
             // debug overlay situation
                 if (path && els[0] !== path) {
-                  try { console.log('map:click overlay hit — top element', els[0], 'found state underneath', path); } catch (e) {}
+                  try { console.log('map:click overlay hit top element', els[0], 'found state underneath', path); } catch (e) {}
                 }
           } else {
             // fallback to elementFromPoint
@@ -222,8 +276,6 @@ window.addEventListener('popstate', (e) => {
       if (_emitTimeout) clearTimeout(_emitTimeout);
       _emitTimeout = setTimeout(() => {
         window.dispatchEvent(new CustomEvent('t1:map-view', { detail: { x: vb.x, y: vb.y, w: vb.w, h: vb.h } }));
-        // Also detect center state once per debounce and emit t1:state so Breakdown updates
-        detectCenterStateAndEmit();
         _emitTimeout = null;
       }, 80);
     }
@@ -306,6 +358,7 @@ window.addEventListener('popstate', (e) => {
     svg.addEventListener('dblclick', (e) => {
       vb = { x: 0, y: 0, w: WIDTH, h: HEIGHT };
       setViewBox();
+      clearSelection({ emit: true, push: false });
     });
 
     // Hook up control buttons
@@ -331,7 +384,9 @@ window.addEventListener('popstate', (e) => {
       vb.w = newW; vb.h = newH; clampVB(); setViewBox();
     });
     if (btnReset) btnReset.addEventListener('click', () => {
-      vb = { x: 0, y: 0, w: WIDTH, h: HEIGHT }; setViewBox();
+      vb = { x: 0, y: 0, w: WIDTH, h: HEIGHT };
+      setViewBox();
+      clearSelection({ emit: true, push: false });
     });
 
     // Keep viewBox within the map bounds (avoid blank margins)
@@ -348,29 +403,6 @@ window.addEventListener('popstate', (e) => {
         vb.y = Math.max(0, Math.min(vb.y, HEIGHT - vb.h));
       } else {
         vb.y = (HEIGHT - vb.h) / 2;
-      }
-    }
-
-    // Try to detect which state sits at the center of the current viewBox and dispatch a state event.
-    let _lastCenterState = null;
-    function detectCenterStateAndEmit() {
-      try {
-        const rect = svg.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const el = document.elementFromPoint(cx, cy);
-        if (!el) return;
-        const path = el.closest && el.closest('.state') ? el.closest('.state') : (el.classList && el.classList.contains('state') ? el : null);
-        if (path) {
-          const f = path.getAttribute('data-fips');
-          if (f && f !== _lastCenterState) {
-                        _lastCenterState = f;
-            // Use selectState to update UI and ?fips= without pushing history
-            selectState(f, { emit: true, push: false });
-          }
-        }
-      } catch (err) {
-        // ignore
       }
     }
 
@@ -428,7 +460,7 @@ window.addEventListener('popstate', (e) => {
       try {
         const params = new URL(window.location.href).searchParams;
 const f = params.get('fips');
-if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: f }));
+if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: { fips: f, code: fipsToCode(f) || null } }));
       } catch (err) {}
     });
   } else {
@@ -436,11 +468,13 @@ if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: f }));
     try {
       const params = new URL(window.location.href).searchParams;
 const f = params.get('fips');
-if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: f }));
+if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: { fips: f, code: fipsToCode(f) || null } }));
     } catch (err) {}
   }
 
 </script>
+
+
 
 
 

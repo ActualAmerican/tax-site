@@ -1,0 +1,41 @@
+<div class="inputs-local stack">
+  <div class="inputs-local__group" role="group" aria-label="Local tax categories">
+    <button type="button" data-cat="local-income" aria-pressed="true" class="scope-chip scope-chip--local">
+      Local income
+    </button>
+    <button type="button" data-cat="local-sales" aria-pressed="true" class="scope-chip scope-chip--local">
+      Local sales
+    </button>
+    <button type="button" data-cat="lodging" aria-pressed="false" class="scope-chip scope-chip--local">
+      Lodging &amp; short-term stay
+    </button>
+    <button type="button" data-cat="car-rental" aria-pressed="false" class="scope-chip scope-chip--local">
+      Car rental
+    </button>
+    <button type="button" data-cat="prepared-foods" aria-pressed="false" class="scope-chip scope-chip--local">
+      Prepared foods
+    </button>
+    <button type="button" data-cat="parking" aria-pressed="false" class="scope-chip scope-chip--local">
+      Parking &amp; admissions
+    </button>
+  </div>
+  <p class="muted-note">Toggles are visual for now; local tax math arrives in the next pass.</p>
+</div>
+
+<script type="module">
+  (function initLocalInputs() {
+    const script = document.currentScript;
+    if (!script) return;
+    const root = script.previousElementSibling;
+    if (!root || !root.matches('.inputs-local')) return;
+
+    root.addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-cat]');
+      if (!btn) return;
+      const next = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+      btn.classList.toggle('is-active', next);
+    });
+  })();
+</script>
+

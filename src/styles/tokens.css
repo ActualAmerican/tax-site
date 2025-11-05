@@ -23,4 +23,7 @@
   /* modal tokens */
   --modal-scrim: rgba(0, 0, 0, 0.55);
   --modal-panel: #0f1520;
+  --scope-local: var(--t1-income);
+  --scope-state: var(--t1-property);
+  --scope-federal: var(--t1-fuel);
 }

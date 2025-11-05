@@ -7,7 +7,11 @@ import addFormats from "ajv-formats";
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 addFormats(ajv);
 
-const PACK = JSON.parse(fs.readFileSync("data/packs/2025.1.0.json", "utf8"));
+// Prefer validating the composed pack if present, else fall back to base
+const COMPOSED_PATH = "data/packs/2025.1.0.composed.json";
+const BASE_PATH = "data/packs/2025.1.0.json";
+const pickPath = fs.existsSync(COMPOSED_PATH) ? COMPOSED_PATH : BASE_PATH;
+const PACK = JSON.parse(fs.readFileSync(pickPath, "utf8"));
 const SCHEMA = (name) =>
   JSON.parse(fs.readFileSync(path.join("data/schemas", name), "utf8"));
 
@@ -66,4 +70,4 @@ for (const r of PACK.fuel) {
     die(`Unusual fuel cents/gal ${r.cents_per_gallon} for ${r.state}`);
 }
 
-console.log("? Pack 2025.1.0 passed schema & sanity checks.");
+console.log(`✓ Pack validated: ${pickPath}`);

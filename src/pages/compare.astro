@@ -6,6 +6,8 @@ import Modal from '../components/Modal.astro';
 import Assumptions from '../components/Assumptions.astro';
 import pack from '../../data/packs/2025.1.0.json';
 
+const packLiteral = JSON.stringify(pack).replace(/</g, '\\u003c');
+
 const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const qp = new URL(Astro.request.url).searchParams;
 const leftDefault = (qp.get('a') || 'CA').toUpperCase();
@@ -15,11 +17,16 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>T1 — Compare States</title>
+    <title>T1 - Compare States</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="description" content="Compare state tax burdens side-by-side with totals, effective rates, and category differences." />
   </head>
   <body>
+    <script type="module">
+      if (!window.__t1_pack) {
+        window.__t1_pack = ${packLiteral};
+      }
+    </script>
     <main class="container stack" style="gap:1.25rem">
       <section class="panel stack" style="gap:.75rem">
         <h1 class="heading--tight">Compare states</h1>
@@ -47,12 +54,12 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
           </div>
           <div class="stack--row">
             <span class="badge">Left</span>
-            <span class="chip" id="sum-left-total">—</span>
-            <span class="chip" id="sum-left-eff">—</span>
-            <button id="swap" type="button" class="badge" title="Swap states">Swap ⇄</button>
+            <span class="chip" id="sum-left-total">--</span>
+            <span class="chip" id="sum-left-eff">--</span>
+            <button id="swap" type="button" class="badge" title="Swap states">Swap &lt;-&gt;</button>
             <span class="badge">Right</span>
-            <span class="chip" id="sum-right-total">—</span>
-            <span class="chip" id="sum-right-eff">—</span>
+            <span class="chip" id="sum-right-total">--</span>
+            <span class="chip" id="sum-right-eff">--</span>
           </div>
         </div>
 
@@ -66,12 +73,12 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
       <section class="container grid-2">
         <section class="panel stack">
           <h2>Left</h2>
-          <Breakdown initialState={leftDefault} compareSlot="left" />
+          <Breakdown initialState={leftDefault} compareSlot="left" pack={pack} />
         </section>
 
         <section class="panel stack">
           <h2>Right</h2>
-          <Breakdown initialState={rightDefault} compareSlot="right" />
+          <Breakdown initialState={rightDefault} compareSlot="right" pack={pack} />
         </section>
       </section>
 
@@ -84,20 +91,20 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
               <th>Category</th>
               <th class="text-right">Left</th>
               <th class="text-right">Right</th>
-              <th class="text-right">Δ</th>
-              <th class="text-right">Δ%</th>
+              <th class="text-right">Diff</th>
+              <th class="text-right">Diff %</th>
             </tr>
           </thead>
           <tbody>
-            <tr class="loading"><td colspan="5">Waiting for both sides…</td></tr>
+            <tr class="loading"><td colspan="5">Waiting for both sides...</td></tr>
           </tbody>
           <tfoot>
             <tr class="subtotal">
               <th>Total</th>
-              <th id="cmp-left-total" class="text-right">—</th>
-              <th id="cmp-right-total" class="text-right">—</th>
-              <th id="cmp-diff-total" class="text-right">—</th>
-              <th id="cmp-diffpct-total" class="text-right">—</th>
+              <th id="cmp-left-total" class="text-right">--</th>
+              <th id="cmp-right-total" class="text-right">--</th>
+              <th id="cmp-diff-total" class="text-right">--</th>
+              <th id="cmp-diffpct-total" class="text-right">--</th>
             </tr>
           </tfoot>
         </table>
@@ -130,16 +137,16 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
 
       // Normalize any garbled glyphs in static markup (defensive)
       (function normalizeGarbledText(){
-        const swapBtn = $('#swap'); if (swapBtn) swapBtn.textContent = 'Swap ↔';
+      const swapBtn = $('#swap'); if (swapBtn) swapBtn.textContent = 'Swap <->';
         const chipIds = ['#sum-left-total','#sum-left-eff','#sum-right-total','#sum-right-eff'];
-        for (const id of chipIds) { const el = $(id); if (el && (!el.textContent || /[^\w$%]/.test(el.textContent))) el.textContent = '—'; }
+        for (const id of chipIds) { const el = $(id); if (el && (!el.textContent || /[^\w$%]/.test(el.textContent))) el.textContent = '--'; }
         const head = $('#cmp-table thead tr');
         if (head && head.children && head.children.length >= 5) {
-          head.children[3].textContent = 'Δ';
-          head.children[4].textContent = 'Δ%';
+          head.children[3].textContent = 'Diff';
+          head.children[4].textContent = 'Diff %';
         }
         const loading = $('#cmp-table tbody .loading td');
-        if (loading) loading.textContent = 'Waiting for both sides…';
+        if (loading) loading.textContent = 'Waiting for both sides...';
       })();
 
       // Maintain latest snapshots from both Breakdown panels
@@ -164,7 +171,7 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
         const tbody = $('#cmp-table tbody');
         if (!tbody) return;
         if (!snapL || !snapR) {
-          tbody.innerHTML = '<tr class="loading"><td colspan="5">Waiting for both sides…</td></tr>';
+          tbody.innerHTML = '<tr class="loading"><td colspan="5">Waiting for both sides...</td></tr>';
           return;
         }
         // combine rows
@@ -182,11 +189,11 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
           const diffPct = (lv === 0) ? null : (diff / lv);
           rows.push({
             label,
-            left:  lv ? money(lv) : '—',
-            right: rv ? money(rv) : '—',
+            left:  lv ? money(lv) : '--',
+            right: rv ? money(rv) : '--',
             diffClass: diff > 0 ? 'diff-neg' : (diff < 0 ? 'diff-pos' : 'muted'),
-            diff: (lv===0 && rv===0) ? '—' : money(diff),
-            diffPct: (diffPct==null) ? '—' : ((diffPct*100).toFixed(1)+'%')
+            diff: (lv===0 && rv===0) ? '--' : money(diff),
+            diffPct: (diffPct==null) ? '--' : ((diffPct*100).toFixed(1)+'%')
           });
         }
 
@@ -205,7 +212,7 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
             right: money(rv),
             diffClass: diff > 0 ? 'diff-neg' : (diff < 0 ? 'diff-pos' : 'muted'),
             diff: money(diff),
-            diffPct: (dp==null) ? '—' : ((dp*100).toFixed(1)+'%')
+            diffPct: (dp==null) ? '--' : ((dp*100).toFixed(1)+'%')
           });
         };
         pushRow('State subtotal', stL, stR);
@@ -233,7 +240,7 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
         $('#cmp-right-total')!.textContent = money(rt);
         const diffEl = $('#cmp-diff-total'); const diffPctEl = $('#cmp-diffpct-total');
         if (diffEl)    { diffEl.textContent    = money(dt); diffEl.className = 'text-right ' + (dt>0?'diff-neg':(dt<0?'diff-pos':'')); }
-        if (diffPctEl) { diffPctEl.textContent = (dp==null? '—' : ((dp*100).toFixed(1)+'%'));
+        if (diffPctEl) { diffPctEl.textContent = (dp==null? '--' : ((dp*100).toFixed(1)+'%'));
                          diffPctEl.className = 'text-right ' + (dt>0?'diff-neg':(dt<0?'diff-pos':'')); }
 
         // update mini summary chips in header
@@ -321,3 +328,4 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
 </html>
   </body>
 </html>
+

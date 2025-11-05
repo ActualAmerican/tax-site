@@ -6,11 +6,11 @@ const { pack } = Astro.props;
   <details open>
     <summary class="label"><strong>Assumptions & sources</strong></summary>
     <div class="stack stack--muted">
-      <div>Pack: <strong>{pack.registry.pack_version}</strong> — Built: {pack.registry.built_at}</div>
+      <div>Pack: <strong>{pack.registry.pack_version}</strong> - Built: {pack.registry.built_at}</div>
       <div>Registry sources:</div>
       <ul>
         {pack.registry.sources.map((s) => (
-          <li>{s.metric}{s.state?` (${s.state})`:''}: <a href={s.url} target="_blank" rel="noopener noreferrer">{s.url}</a> â€” checked {s.checked_at}</li>
+          <li>{s.metric}{s.state?` (${s.state})`:''}: <a href={s.url} target="_blank" rel="noopener noreferrer">{s.url}</a> - checked {s.checked_at}</li>
         ))}
       </ul>
       <div><strong>Notes</strong></div>

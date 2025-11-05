@@ -1,0 +1,32 @@
+<div class="scope-card__body stack">
+  <div class="field">
+    <span class="field__label">Include federal taxes?</span>
+    <div
+      class="toggle-group"
+      data-target="fed"
+      role="radiogroup"
+      aria-label="Include federal taxes"
+    >
+      <button type="button" role="radio" data-value="1" aria-checked="true" tabindex="0">Yes</button>
+      <button type="button" role="radio" data-value="0" aria-checked="false" tabindex="-1">No</button>
+    </div>
+    <input id="fed" type="hidden" value="1" />
+    <span class="muted-note">Adds federal income, payroll, and LTCG rows.</span>
+  </div>
+
+  <label class="field">
+    <span class="field__label">Long-term capital gains ($)</span>
+    <input
+      id="ltcg"
+      type="text"
+      value="0"
+      inputmode="numeric"
+      pattern="[0-9,]*"
+      aria-label="Long-term capital gains"
+    />
+    <span class="muted-note">Only affects the LTCG line when federal scope is on.</span>
+  </label>
+
+  <p class="muted-note">NIIT, Additional Medicare, and AMT planning arrive in T2.</p>
+</div>
+

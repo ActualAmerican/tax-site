@@ -1,0 +1,202 @@
+<section class="locality-picker stack">
+  <header class="locality-picker__header">
+    <h3 class="locality-picker__title">Locality</h3>
+    <button type="button" class="locality-picker__auto" data-action="autodetect">Auto-detect</button>
+  </header>
+  <div class="grid locality-picker__grid">
+    <label class="field">
+      <span class="field__label">ZIP code</span>
+      <input
+        id="local-zip"
+        name="local-zip"
+        type="text"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength="5"
+        placeholder="e.g. 78701"
+        data-field="zip"
+      />
+    </label>
+    <label class="field">
+      <span class="field__label">City</span>
+      <input id="local-city" name="local-city" type="text" placeholder="Austin" data-field="city" />
+    </label>
+    <label class="field">
+      <span class="field__label">County</span>
+      <select class="field__select" data-field="county-select" disabled>
+        <option value="">Select a state to load counties</option>
+      </select>
+    </label>
+    <label class="field">
+      <span class="field__label">County FIPS</span>
+      <input
+        id="local-county"
+        name="local-county"
+        type="text"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength="5"
+        placeholder="48453"
+        data-field="county"
+      />
+    </label>
+  </div>
+  <p class="muted-note">Local rates vary. We'll auto-update when data is connected.</p>
+</section>
+
+<script type="module">
+  (function initLocalityPicker() {
+    const script = document.currentScript;
+    if (!script) return;
+    const root = script.previousElementSibling;
+    if (!root || !root.matches('.locality-picker')) return;
+
+    const COUNTY_DIRECTORY = {
+      CA: [
+        { fips: '06037', name: 'Los Angeles County' },
+        { fips: '06073', name: 'San Diego County' },
+        { fips: '06085', name: 'Santa Clara County' },
+      ],
+      FL: [
+        { fips: '12086', name: 'Miami-Dade County' },
+        { fips: '12099', name: 'Palm Beach County' },
+        { fips: '12011', name: 'Broward County' },
+      ],
+      IL: [
+        { fips: '17031', name: 'Cook County' },
+        { fips: '17043', name: 'DuPage County' },
+        { fips: '17097', name: 'Lake County' },
+      ],
+      NY: [
+        { fips: '36061', name: 'New York County' },
+        { fips: '36047', name: 'Kings County' },
+        { fips: '36059', name: 'Nassau County' },
+      ],
+      OH: [
+        { fips: '39049', name: 'Franklin County' },
+        { fips: '39061', name: 'Hamilton County' },
+        { fips: '39035', name: 'Cuyahoga County' },
+      ],
+      TX: [
+        { fips: '48453', name: 'Travis County' },
+        { fips: '48113', name: 'Dallas County' },
+        { fips: '48201', name: 'Harris County' },
+      ],
+      WA: [
+        { fips: '53033', name: 'King County' },
+        { fips: '53061', name: 'Snohomish County' },
+        { fips: '53063', name: 'Spokane County' },
+      ],
+    };
+
+    let currentState = null;
+
+    const countySelect = root.querySelector('[data-field="county-select"]');
+    const countyInput = root.querySelector('[data-field="county"]');
+    const zipInput = root.querySelector('[data-field="zip"]');
+    const cityInput = root.querySelector('[data-field="city"]');
+
+    const emit = () => {
+      const zip = (root.querySelector('[data-field="zip"]')?.value || '').trim();
+      const city = (root.querySelector('[data-field="city"]')?.value || '').trim();
+      const county = (countyInput?.value || '').trim();
+      const countyName =
+        currentState && county
+          ? (COUNTY_DIRECTORY[currentState] || []).find((c) => c.fips === county)?.name
+          : undefined;
+
+      window.dispatchEvent(
+        new CustomEvent('t1:locality-changed', {
+          detail: {
+            zip: zip || undefined,
+            city: city || undefined,
+            fipsCounty: county || undefined,
+            countyName: countyName || undefined,
+            state: currentState || undefined,
+          },
+        }),
+      );
+    };
+
+    root.querySelectorAll('[data-field]').forEach((input) => {
+      if (input === countySelect) return;
+      input.addEventListener('input', emit);
+      input.addEventListener('change', emit);
+    });
+
+    const auto = root.querySelector('[data-action="autodetect"]');
+    if (auto) {
+      auto.addEventListener('click', (event) => {
+        event.preventDefault();
+        emit();
+      });
+    }
+
+    function renderCountyOptions(code) {
+      if (!countySelect) return;
+      const list = (code && COUNTY_DIRECTORY[code]) || [];
+      countySelect.innerHTML = '';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = list.length ? 'Select a county (optional)' : 'County data coming soon';
+      placeholder.selected = true;
+      placeholder.disabled = list.length === 0;
+      countySelect.appendChild(placeholder);
+
+      if (!list.length) {
+        countySelect.setAttribute('disabled', '');
+        if (countyInput) {
+          countyInput.value = '';
+        }
+        emit();
+        return;
+      }
+
+      list.forEach((entry) => {
+        const opt = document.createElement('option');
+        opt.value = entry.fips;
+        opt.textContent = entry.name;
+        countySelect.appendChild(opt);
+      });
+      countySelect.removeAttribute('disabled');
+    }
+
+    if (countySelect) {
+      countySelect.addEventListener('change', () => {
+        if (countyInput) {
+          countyInput.value = countySelect.value || '';
+        }
+        emit();
+      });
+    }
+
+    window.addEventListener('t1:state', (event) => {
+      const detail = event.detail;
+      let code = null;
+      if (detail) {
+        if (typeof detail === 'string') {
+          code = detail.toUpperCase();
+        } else if (detail.code) {
+          code = String(detail.code).toUpperCase();
+        } else if (detail.fips) {
+          const map = {
+            '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL','13':'GA',
+            '15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD','25':'MA',
+            '26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE','32':'NV','33':'NH','34':'NJ','35':'NM','36':'NY',
+            '37':'NC','38':'ND','39':'OH','40':'OK','41':'OR','42':'PA','44':'RI','45':'SC','46':'SD','47':'TN','48':'TX',
+            '49':'UT','50':'VT','51':'VA','53':'WA','54':'WV','55':'WI','56':'WY','72':'PR'
+          };
+          code = map[String(detail.fips)] || null;
+        }
+      }
+      currentState = code;
+      renderCountyOptions(code);
+      if (!code) {
+        if (countyInput) countyInput.value = '';
+        if (zipInput) zipInput.value = '';
+        if (cityInput) cityInput.value = '';
+      }
+      emit();
+    });
+  })();
+</script>

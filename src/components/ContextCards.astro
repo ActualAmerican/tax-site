@@ -1,20 +1,78 @@
 ---
-const { pack, initialState = 'CA' } = Astro.props;
-const state = initialState;
-const ctx = (st) => (pack.context.find(c=>c.state===st) || {});
+const { pack, initialState = null } = Astro.props;
+const contextMap = Object.fromEntries(
+  (pack.context || []).map((c) => [
+    c.state,
+    {
+      income: c.acs_median_income ?? null,
+      rpp: c.bea_rpp ?? null,
+      unemployment: c.bls_unemp_rate ?? null,
+    },
+  ]),
+);
+const initial = initialState ? contextMap[initialState] : null;
+const fmtCurrency = (val) => (typeof val === 'number' ? `$${val.toLocaleString()}` : '--');
+const fmtNumber = (val, suffix = '') => (typeof val === 'number' ? `${val}${suffix}` : '--');
 ---
 
-<div class="grid">
+<div class="grid" data-component="context-cards">
   <div class="panel">
     <div class="label"><strong>Median Household Income</strong><span>ACS</span></div>
-  <div class="big-number">{ctx(state).acs_median_income ? `$${(ctx(state).acs_median_income).toLocaleString()}` : '—'}</div>
+    <div class="big-number" data-field="income">{fmtCurrency(initial?.income)}</div>
   </div>
   <div class="panel">
     <div class="label"><strong>Regional Price Parity</strong><span>BEA</span></div>
-  <div class="big-number">{ctx(state).bea_rpp ?? '—'}</div>
+    <div class="big-number" data-field="rpp">{fmtNumber(initial?.rpp)}</div>
   </div>
   <div class="panel">
     <div class="label"><strong>Unemployment</strong><span>BLS</span></div>
-  <div class="big-number">{ctx(state).bls_unemp_rate ? `${ctx(state).bls_unemp_rate}%` : '—'}</div>
+    <div class="big-number" data-field="unemployment">{fmtNumber(initial?.unemployment, '%')}</div>
   </div>
 </div>
+
+<script type="module">
+(function () {
+  const root =
+    (document.currentScript && document.currentScript.previousElementSibling) ||
+    document.querySelector('[data-component="context-cards"]');
+  if (!root) return;
+
+  const FIPS_TO_CODE = {
+    '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL','13':'GA',
+    '15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD','25':'MA',
+    '26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE','32':'NV','33':'NH','34':'NJ','35':'NM','36':'NY',
+    '37':'NC','38':'ND','39':'OH','40':'OK','41':'OR','42':'PA','44':'RI','45':'SC','46':'SD','47':'TN','48':'TX',
+    '49':'UT','50':'VT','51':'VA','53':'WA','54':'WV','55':'WI','56':'WY','72':'PR'
+  };
+  const normalizeStateCode = (input) => {
+    if (!input) return null;
+    if (typeof input === 'object') {
+      if (input.code) return normalizeStateCode(input.code);
+      if (input.fips && FIPS_TO_CODE[input.fips]) return FIPS_TO_CODE[input.fips];
+    }
+    const s = String(input).toUpperCase();
+    if (/^[A-Z]{2}$/.test(s)) return s;
+    if (FIPS_TO_CODE[s]) return FIPS_TO_CODE[s];
+    return null;
+  };
+
+  const CONTEXT = ${JSON.stringify(contextMap)};
+
+  const incomeEl = root.querySelector('[data-field="income"]');
+  const rppEl = root.querySelector('[data-field="rpp"]');
+  const unempEl = root.querySelector('[data-field="unemployment"]');
+
+  function render(code) {
+    const ctx = code ? CONTEXT[code] : null;
+    if (incomeEl) incomeEl.textContent = ctx && typeof ctx.income === 'number' ? `$${ctx.income.toLocaleString()}` : '--';
+    if (rppEl) rppEl.textContent = ctx && typeof ctx.rpp === 'number' ? `${ctx.rpp}` : '--';
+    if (unempEl) unempEl.textContent = ctx && typeof ctx.unemployment === 'number' ? `${ctx.unemployment}%` : '--';
+  }
+
+  window.addEventListener('t1:state', (event) => {
+    const code = normalizeStateCode(event.detail);
+    render(code);
+  });
+})();
+</script>
+

@@ -36,6 +36,7 @@ function main(){
   pack.property = ensureArr(pack.property);
   pack.fuel     = ensureArr(pack.fuel);
   pack.excise   = ensureArr(pack.excise);
+  pack.context  = ensureArr(pack.context);
 
   const seen = {
     income: byState(pack.income),
@@ -43,6 +44,7 @@ function main(){
     property: byState(pack.property),
     fuel: byState(pack.fuel),
     excise: byState(pack.excise),
+    context: byState(pack.context),
   };
 
   let added = 0, touched = 0;
@@ -67,24 +69,61 @@ function main(){
       pack.excise.push(ensureProvenance({ state:s, year:YEAR, cigarette_per_pack:0, alcohol_per_unit:0, alcohol_unit:'per_unit', cigarette_unit:'per_pack' }));
       added++;
     }
+    if (!seen.context.has(s)) {
+      pack.context.push(ensureProvenance({ state:s, year:YEAR, acs_median_income:0, bea_rpp:0, bls_unemp_rate:0 }));
+      added++;
+    }
   }
 
   // Backfill provenance on existing rows, too
-  for (const m of ['income','sales','property','fuel','excise']){
+  // Normalize and backfill provenance/fields on existing rows, too
+  const normalize = {
+    income(r){
+      if (r.has_income_tax === false) return r;
+      if (r.standard_deduction == null) r.standard_deduction = 0;
+      if (r.flat == null && (!Array.isArray(r.brackets) || r.brackets.length === 0)) {
+        // Leave as-is to avoid fabricating tax; UI handles missing gracefully.
+        r.brackets = Array.isArray(r.brackets) ? r.brackets : [];
+      }
+      return r;
+    },
+    sales(r){
+      const sr = Number(r.state_rate || 0);
+      const lr = Number(r.avg_local_rate || 0);
+      if (typeof r.combined_rate !== 'number') r.combined_rate = +(sr + lr);
+      r.state_rate = sr; r.avg_local_rate = lr; return r;
+    },
+    property(r){ r.effective_rate = Number(r.effective_rate || 0); return r; },
+    fuel(r){ r.cents_per_gallon = Number(r.cents_per_gallon || 0); return r; },
+    excise(r){
+      r.cigarette_per_pack = Number(r.cigarette_per_pack || 0);
+      r.alcohol_per_unit = Number(r.alcohol_per_unit || 0);
+      if (!r.cigarette_unit) r.cigarette_unit = 'per_pack';
+      if (!r.alcohol_unit) r.alcohol_unit = 'per_unit';
+      return r;
+    },
+    context(r){
+      r.acs_median_income = Number(r.acs_median_income || 0);
+      r.bea_rpp = Number(r.bea_rpp || 0);
+      r.bls_unemp_rate = Number(r.bls_unemp_rate || 0);
+      return r;
+    }
+  };
+
+  for (const m of ['income','sales','property','fuel','excise','context']){
     for (const r of pack[m]){
       const before = JSON.stringify(r);
-      ensureProvenance(r);
+      normalize[m](ensureProvenance(r));
       if (before !== JSON.stringify(r)) touched++;
     }
   }
 
   // Stable sort
   const by = (a,b)=> String(a.state).localeCompare(String(b.state));
-  pack.income.sort(by); pack.sales.sort(by); pack.property.sort(by); pack.fuel.sort(by); pack.excise.sort(by);
+  pack.income.sort(by); pack.sales.sort(by); pack.property.sort(by); pack.fuel.sort(by); pack.excise.sort(by); pack.context.sort(by);
 
   fs.writeFileSync(PACK_PATH, JSON.stringify(pack,null,2));
   console.log(`ensure_provenance: added ${added} rows; backfilled ${touched} rows; wrote ${PACK_PATH}`);
 }
 
 main();
-

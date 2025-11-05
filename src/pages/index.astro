@@ -1,4 +1,4 @@
-﻿---
+---
 import '../styles/tokens.css';
 import '../styles/utilities.css';
 import Map from '../components/Map.astro';
@@ -8,6 +8,9 @@ import Assumptions from '../components/Assumptions.astro';
 import ContextCards from '../components/ContextCards.astro';
 import pack from '../../data/packs/2025.1.0.json';
 import Modal from '../components/Modal.astro';
+import TaxDeadlinesBanner from '../components/TaxDeadlinesBanner.astro';
+
+const packLiteral = JSON.stringify(pack).replace(/</g, '\\u003c');
 ---
 
 <html lang="en">
@@ -15,9 +18,9 @@ import Modal from '../components/Modal.astro';
     <meta charset="utf-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; font-src 'self' data:;" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>T1 — State + Federal Tax Burden Map</title>
+    <title>T1 - State + Federal Tax Burden Map</title>
     <meta name="description" content="Interactive state tax burden estimator with optional federal layer." />
-    <meta property="og:title" content="T1 — State + Federal Tax Burden Map" />
+    <meta property="og:title" content="T1 - State + Federal Tax Burden Map" />
     <meta property="og:description" content="Interactive state & local tax burden estimator with optional federal layer." />
     <script type="application/ld+json">
     {JSON.stringify({
@@ -31,30 +34,42 @@ import Modal from '../components/Modal.astro';
     </script>
   </head>
   <body>
-    <main class="container grid grid--sidebar">
-      <section class="panel stack">
-        <h1 class="heading--tight">T1 — State + Federal Tax Burden Map</h1>
-        <div class="badge">Pack <strong>{pack.registry.pack_version}</strong> â€¢ built {pack.registry.built_at}</div>
+    <script type="module">
+      if (!window.__t1_pack) {
+        window.__t1_pack = ${packLiteral};
+      }
+    </script>
+    <main class="container stack">
+      <header class="page-header stack">
+        <div class="page-header__title">
+          <h1 class="heading--tight">T1 - State + Federal Tax Burden Map</h1>
+          <span class="chip chip--meta" aria-label="Last updated">
+            Last updated | Pack {pack.registry.pack_version} | {pack.registry.built_at}
+          </span>
+        </div>
+        <TaxDeadlinesBanner />
+      </header>
 
-        <Inputs id="inputs" />
-        <Assumptions pack={pack} />
-      </section>
+      <div class="grid grid--sidebar">
+        <section class="panel stack">
+          <Inputs id="inputs" />
+          <Assumptions pack={pack} />
+        </section>
 
-      <section class="stack">
+        <section class="stack">
           <Map />
-<Breakdown />
-          <ContextCards pack={pack} initialState="CA" />
-      </section>
+          <Breakdown initialState={null} pack={pack} />
+          <ContextCards pack={pack} initialState={null} />
+        </section>
+      </div>
     </main>
     <script type="module">
       try {
         const t = document.querySelector('h1.heading--tight');
-        if (t) t.textContent = 'T1 — State + Federal Tax Burden Map';
-        const badge = document.querySelector('.badge');
-        if (badge) badge.innerHTML = badge.innerHTML.replace(/built.*/, (m)=>m.replace(/.+?built/,' â€” built'));
+        if (t) t.textContent = 'T1 - State + Federal Tax Burden Map';
         const og = document.querySelector('meta[property="og:title"]');
-        if (og) og.setAttribute('content','T1 — State + Federal Tax Burden Map');
-        document.title = 'T1 — State + Federal Tax Burden Map';
+        if (og) og.setAttribute('content','T1 - State + Federal Tax Burden Map');
+        document.title = 'T1 - State + Federal Tax Burden Map';
       } catch {}
     </script>
   </body>

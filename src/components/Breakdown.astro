@@ -1,31 +1,38 @@
-﻿---
+---
 /* Breakdown panel (bundled module import) */
-const { initialState = 'CA', compareSlot } = Astro.props;
+const { initialState = null, compareSlot, pack: packProp = null } = Astro.props;
 const slot = compareSlot ?? 'solo';
+const initialCode = initialState ?? '';
+const initialLabel = initialState ?? '--';
+const hasInitial = Boolean(initialState);
+const exportHref = hasInitial ? `/report?state=${initialCode}` : '#';
+const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
+const embeddedPack = packProp ? JSON.stringify(packProp).replace(/</g, '\\u003c') : 'null';
 ---
 <div
   class="panel stack"
   data-t1-breakdown
   data-slot={slot}
-  data-state={initialState}
+  data-state={initialCode}
 >
   <!-- Header with live chips + toolbar -->
   <div class="header--space">
     <div class="stack--row">
       <strong>Breakdown</strong>
-      <span id="bd-state" class="badge" role="status" aria-live="polite">{initialState}</span>
-      <span class="chip" id="chip-total">â€”</span>
-      <span class="chip" id="chip-eff">â€”</span>
+      <span id="bd-state" class="badge" role="status" aria-live="polite">{initialLabel}</span>
+      <span class="chip" id="chip-total">--</span>
+      <span class="chip" id="chip-eff">--</span>
     </div>
     <div class="toolbar">
-      <a class="badge" id="bd-export" href={`/report?state=${initialState}`}>Export PDF</a>
-      <a class="badge" id="bd-compare" href={`/compare?a=${initialState}`}>Compareâ€¦</a>
+      <a class={'badge' + (hasInitial ? '' : ' is-disabled')} id="bd-export" href={exportHref} aria-disabled={!hasInitial}>Export PDF</a>
+      <a class={'badge' + (hasInitial ? '' : ' is-disabled')} id="bd-compare" href={compareHref} aria-disabled={!hasInitial}>Compare</a>
       <button class="badge" id="bd-pie" type="button" title="Open pie chart">Open chart</button>
       <button class="badge" id="bd-copy" type="button">Copy link</button>
     </div>
   </div>
 
   <!-- Filled stacked bar -->
+
   <div id="chart" class="bar" aria-label="Stacked tax burden bar"></div>
 
   <table id="tbl" class="table-full">
@@ -51,24 +58,34 @@ const slot = compareSlot ?? 'solo';
 <!-- Client: listens for state & inputs, renders rows, stacked bar, and manages toolbar -->
 <script type="module">
 (function () {
+  const EMBEDDED_PACK = ${embeddedPack};
+
   // Panel root
   const root =
     (document.currentScript && document.currentScript.previousElementSibling) ||
     document.querySelector('[data-t1-breakdown]');
   if (!root) return;
 
-  // Loading row until first compute
+  // Loading and empty states
   const _tbody = root.querySelector('tbody');
-  function setLoadingRow() {
+  function setPlaceholderRow(message) {
     if (!_tbody) return;
-    _tbody.innerHTML = '<tr class="loading"><td colspan="3">Loading latest tax dataâ€¦</td></tr>';
+    _tbody.innerHTML = `<tr class="loading"><td colspan="3">${message}</td></tr>`;
+    renderStackedBar([], 0);
+    _lastSegments = [];
   }
-  setLoadingRow();
-  // Defensively normalize the loading text if encoding was garbled
-  try {
-    const _cell = _tbody && _tbody.querySelector('.loading td');
-    if (_cell) _cell.textContent = 'Loading latest tax dataâ€¦';
-  } catch {}
+  function setLoadingRow() {
+    setPlaceholderRow('Loading latest tax data...');
+  }
+  function setEmptyRow() {
+    setPlaceholderRow('Select a state to view its breakdown.');
+  }
+  let currentState = root.getAttribute('data-state') || '';
+  if (currentState) {
+    setLoadingRow();
+  } else {
+    setEmptyRow();
+  }
 
   const slot       = root.getAttribute('data-slot') || 'solo';
   const stateLabel = root.querySelector('#bd-state');
@@ -78,27 +95,51 @@ const slot = compareSlot ?? 'solo';
   const pieBtn     = root.querySelector('#bd-pie');
   const chipTotal  = root.querySelector('#chip-total');
   const chipEff    = root.querySelector('#chip-eff');
+  const totEl      = root.querySelector('#tot');
+  const effEl      = root.querySelector('#eff');
   const barEl      = root.querySelector('#chart');
+  const scopeFlags = { local: false, state: true, federal: true };
+  function applyToolbarState() {
+    const active = Boolean(currentState);
+    if (stateLabel) stateLabel.textContent = active ? currentState : '--';
+    if (!active && chipTotal) chipTotal.textContent = '--';
+    if (!active && chipEff)   chipEff.textContent   = '--';
+    if (!active && totEl) totEl.textContent = '--';
+    if (!active && effEl) effEl.textContent = '--';
+    if (exportLink) {
+      exportLink.classList.toggle('is-disabled', !active);
+      exportLink.setAttribute('aria-disabled', String(!active));
+      exportLink.setAttribute('href', active ? `/report?state=${currentState}` : '#');
+    }
+    if (compareLink) {
+      compareLink.classList.toggle('is-disabled', !active);
+      compareLink.setAttribute('aria-disabled', String(!active));
+      compareLink.setAttribute('href', active ? buildCompareHref(currentState) : '#');
+      compareLink.textContent = 'Compare';
+    }
+  }
+  applyToolbarState();
+
 
   // Lightweight analytics hooks (safe no-ops if module missing)
   try {
     if (copyBtn) copyBtn.addEventListener('click', async () => {
-      try { (await import('../lib/analytics.ts')).track('copy_link', { page: slot, state: root.getAttribute('data-state') }); } catch {}
+      try { (await import('../lib/analytics.ts')).track('copy_link', { page: slot, state: currentState }); } catch {}
     });
     if (pieBtn) pieBtn.addEventListener('click', async () => {
-      try { (await import('../lib/analytics.ts')).track('open_chart', { page: slot, state: root.getAttribute('data-state') }); } catch {}
+      try { (await import('../lib/analytics.ts')).track('open_chart', { page: slot, state: currentState }); } catch {}
     });
     if (exportLink) exportLink.addEventListener('click', async () => {
-      try { (await import('../lib/analytics.ts')).track('export_pdf', { page: slot, state: root.getAttribute('data-state') }); } catch {}
+      try { (await import('../lib/analytics.ts')).track('export_pdf', { page: slot, state: currentState }); } catch {}
     });
   } catch {}
 
-  // Normalize any garbled glyphs in static markup
-  if (compareLink) compareLink.textContent = 'Compareâ€¦';
-  if (chipTotal && (!chipTotal.textContent || /[^\w$%]/.test(chipTotal.textContent))) chipTotal.textContent = 'â€”';
-  if (chipEff   && (!chipEff.textContent   || /[^\w$%]/.test(chipEff.textContent)))   chipEff.textContent   = 'â€”';
+  // Normalize toolbar text in case SSR encoding artifacts slip in.
+  if (compareLink) compareLink.textContent = 'Compare';
+  if (chipTotal && (!chipTotal.textContent || chipTotal.textContent.trim() === '')) chipTotal.textContent = '--';
+  if (chipEff && (!chipEff.textContent || chipEff.textContent.trim() === '')) chipEff.textContent = '--';
 
-  // FIPS â†’ USPS map
+  // FIPS to USPS map
   const FIPS_TO_CODE = {
     '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL','13':'GA',
     '15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD','25':'MA',
@@ -108,6 +149,10 @@ const slot = compareSlot ?? 'solo';
   };
   function normalizeStateCode(input) {
     if (!input) return null;
+    if (typeof input === 'object') {
+      if (input.code) return normalizeStateCode(input.code);
+      if (input.fips) return normalizeStateCode(input.fips);
+    }
     const s = String(input).toUpperCase();
     if (/^[A-Z]{2}$/.test(s)) return s;
     const two = s.padStart(2,'0');
@@ -137,21 +182,47 @@ const slot = compareSlot ?? 'solo';
     mpg: 28,
     spendingShare: 0.60,
     taxableShare: 0.55,
-    includeFederal: false,
+    includeFederal: true,
     ltcg: 0
   };
 
   // Ignore stale async renders
   let _seq = 0;
 
-  // Pack fetch/cache
-  let _packCache = null;
+  // Pack fetch/cache (prefers embedded data)
+  let _packCache = (EMBEDDED_PACK && EMBEDDED_PACK !== 'null') ? EMBEDDED_PACK : null;
+
+  if (_packCache) {
+    try {
+      if (!window.__t1_pack) window.__t1_pack = _packCache;
+    } catch (err) {
+      try { console.warn('Breakdown: failed to assign embedded pack', err); } catch (_) {}
+    }
+  }
+
+  function seedPackFromGlobal() {
+    if (_packCache) return _packCache;
+    try {
+      const seeded = typeof window !== 'undefined' ? window['__t1_pack'] : null;
+      if (seeded) {
+        _packCache = seeded;
+      }
+    } catch (err) {
+      try { console.warn('Breakdown: failed to read preloaded pack', err); } catch (_) {}
+    }
+    return _packCache;
+  }
+  seedPackFromGlobal();
+
   async function loadPack() {
     if (_packCache) return _packCache;
+    const preloaded = seedPackFromGlobal();
+    if (preloaded) return preloaded;
     try {
       const res = await fetch('/data/packs/2025.1.0.json');
       if (!res.ok) throw new Error('pack fetch failed');
       _packCache = await res.json();
+      try { if (typeof window !== 'undefined') window['__t1_pack'] = _packCache; } catch {}
       return _packCache;
     } catch (err) {
       console.warn('Breakdown: failed to load pack', err);
@@ -161,7 +232,7 @@ const slot = compareSlot ?? 'solo';
         if (b) {
           b.removeAttribute('hidden');
           b.textContent = 'Failed to load tax data. Retry?';
-          const btn = document.createElement('button'); btn.textContent = 'Retry'; btn.className='badge'; btn.onclick = () => { b.setAttribute('hidden',''); setLoadingRow(); _packCache=null; computeDemoBreakdown(root.getAttribute('data-state')||'CA'); };
+          const btn = document.createElement('button'); btn.textContent = 'Retry'; btn.className='badge'; btn.onclick = () => { b.setAttribute('hidden',''); setLoadingRow(); _packCache=null; computeDemoBreakdown(currentState); };
           b.appendChild(document.createTextNode(' ')); b.appendChild(btn);
         }
       } catch {}
@@ -357,7 +428,7 @@ const slot = compareSlot ?? 'solo';
     const legend = data.map(s => `
       <div class="legend__item">
         <span class="legend__swatch" style="background:${s.color}"></span>
-        <span>${s.label} â€” <strong>${fmt(s.value)}</strong> (${pctOf(s.value,total)})</span>
+        <span>${s.label} — <strong>${fmt(s.value)}</strong> (${pctOf(s.value,total)})</span>
       </div>
     `).join('');
 
@@ -374,6 +445,13 @@ const slot = compareSlot ?? 'solo';
 
   async function computeDemoBreakdown(code) {
     const mySeq = ++_seq;
+
+    if (!code) {
+      currentState = '';
+      setEmptyRow();
+      applyToolbarState();
+      return;
+    }
 
     const inc  = Number(latestInputs.income) || 0;
     const hv   = Number(latestInputs.homeValue) || 0;
@@ -453,22 +531,26 @@ const slot = compareSlot ?? 'solo';
           `OASDI ${(p.ssRate*100).toFixed(1)}%`,
           `Medicare ${(p.mediRate*100).toFixed(2)}%`,
           `+ ${(p.addRate*100).toFixed(1)}% above $${Number(p.addThresh).toLocaleString()}`
-        ].join(' Â· ');
+        ]].join(' · ');
       }
     }
 
     // Build rows + totals
-    const stateNumeric = [
+    const rawStateNumeric = [
       { key:'income',   label: 'Income tax',   value: stIncomeMissing   ? null : stIncome },
       { key:'sales',    label: 'Sales tax',    value: stSalesMissing    ? null : stSales },
       { key:'property', label: 'Property tax', value: stPropertyMissing ? null : stProperty },
     ];
-    const federalNumeric = [];
-    if (latestInputs.includeFederal) {
-      federalNumeric.push({ key:'fed_income', label: 'Federal income',     value: fedIncome });
-      federalNumeric.push({ key:'payroll',    label: 'Payroll (employee)', value: fedPayroll, title: payrollTitle || undefined });
-      if (fedLTCG > 0) federalNumeric.push({ key:'ltcg', label:'LTCG', value: fedLTCG });
+    const includeFederal = scopeFlags.federal && latestInputs.includeFederal;
+    const rawFederalNumeric = [];
+    if (includeFederal) {
+      rawFederalNumeric.push({ key:'fed_income', label: 'Federal income',     value: fedIncome });
+      rawFederalNumeric.push({ key:'payroll',    label: 'Payroll (employee)', value: fedPayroll, title: payrollTitle || undefined });
+      if (fedLTCG > 0) rawFederalNumeric.push({ key:'ltcg', label:'LTCG', value: fedLTCG });
     }
+
+    const stateNumeric = scopeFlags.state ? rawStateNumeric : [];
+    const federalNumeric = includeFederal ? rawFederalNumeric : [];
 
     const total = [...stateNumeric, ...federalNumeric].reduce((a, r) => a + (r.value ?? 0), 0);
     const stateSum = stateNumeric.reduce((a, r) => a + (r.value ?? 0), 0);
@@ -477,12 +559,21 @@ const slot = compareSlot ?? 'solo';
     const toDisplay = (arr) => arr.map(r => ({
       key:    r.key,
       label:  r.label,
-      amount: r.value == null ? 'â€”' : fmt(r.value),
-      pct:    r.value == null ? 'â€”' : pctOf(r.value,total),
+      amount: r.value == null ? '—' : fmt(r.value),
+      pct:    r.value == null ? '—' : pctOf(r.value,total),
       title:  r.title
     }));
     const stateDisplay   = toDisplay(stateNumeric);
     const federalDisplay = toDisplay(federalNumeric);
+
+    if (!stateDisplay.length && !federalDisplay.length) {
+      if (totEl) totEl.textContent = '--';
+      if (effEl) effEl.textContent = '--';
+      if (chipTotal) chipTotal.textContent = '--';
+      if (chipEff) chipEff.textContent = '--';
+      setPlaceholderRow('Enable a scope to view totals.');
+      return;
+    }
 
     // Normalize any placeholder/dash output to concrete zeros for MVP (no dashes)
     function normalizeDisplay(arr){
@@ -536,7 +627,8 @@ const slot = compareSlot ?? 'solo';
       rows: {
         state: stateNumeric,
         federal: federalNumeric
-      }
+      },
+      scopes: { ...scopeFlags }
     };
     root.dispatchEvent(new CustomEvent('t1:breakdown-computed', { detail: snapshot, bubbles: true }));
   }
@@ -544,7 +636,18 @@ const slot = compareSlot ?? 'solo';
   function updateState(val) {
     const code = normalizeStateCode(val);
 
-    // Read latest inputs from the form
+    if (!code) {
+      currentState = '';
+      root.setAttribute('data-state', '');
+      setEmptyRow();
+      applyToolbarState();
+      return;
+    }
+
+    currentState = code;
+    root.setAttribute('data-state', code);
+
+    // Read latest inputs from the form so the next compute reflects the current UI
     try {
       const form = document.querySelector('form[aria-label="Tax inputs"]');
       if (form) {
@@ -570,24 +673,19 @@ const slot = compareSlot ?? 'solo';
       }
     } catch {}
 
-    if (!code) return;
-
-    root.setAttribute('data-state', code);
-    if (stateLabel) stateLabel.textContent = code;
-    if (exportLink) exportLink.setAttribute('href', `/report?state=${code}`);
-    if (compareLink) compareLink.setAttribute('href', buildCompareHref(code));
+    setLoadingRow();
+    applyToolbarState();
 
     requestAnimationFrame(() => computeDemoBreakdown(code));
   }
 
   // Map selects a new state
   window.addEventListener('t1:state', (e) => {
-    const s = e.detail;
-    if (!s) return;
-    if (slot === 'solo') updateState(s);
+    if (slot !== 'solo') return;
+    updateState(e.detail || null);
   });
 
-  // Inputs changed â†’ recompute current state (next frame)
+  // Inputs changed — recompute current state (next frame)
   window.addEventListener('t1:inputs', (e) => {
     const d = e.detail || {};
     latestInputs.filingStatus   = d.filingStatus   ?? latestInputs.filingStatus;
@@ -601,8 +699,12 @@ const slot = compareSlot ?? 'solo';
     latestInputs.includeFederal = (typeof d.includeFederal === 'boolean') ? d.includeFederal : latestInputs.includeFederal;
     latestInputs.ltcg           = d.ltcg           ?? latestInputs.ltcg;
 
-    const cur = root.getAttribute('data-state') || stateLabel?.textContent || 'CA';
-    requestAnimationFrame(() => computeDemoBreakdown(cur));
+    if (!currentState) {
+      setEmptyRow();
+      applyToolbarState();
+      return;
+    }
+    requestAnimationFrame(() => computeDemoBreakdown(currentState));
   });
 
   // Fallback: recompute on any input/change events from the inputs form to
@@ -623,16 +725,37 @@ const slot = compareSlot ?? 'solo';
         latestInputs.includeFederal = get('fed')  ? (get('fed').value === '1')   : latestInputs.includeFederal;
         latestInputs.ltcg           = get('ltcg') ? parse(get('ltcg').value)     : latestInputs.ltcg;
       } catch {}
-      const cur = root.getAttribute('data-state') || stateLabel?.textContent || 'CA';
-      requestAnimationFrame(() => computeDemoBreakdown(cur));
+      if (!currentState) {
+        setEmptyRow();
+        applyToolbarState();
+        return;
+      }
+      requestAnimationFrame(() => computeDemoBreakdown(currentState));
     };
     form.addEventListener('input', capture, { passive: true });
     form.addEventListener('change', capture);
   })();
 
   // Compare slots support
-  window.addEventListener('t1:state-left',  (e) => { if (slot === 'left')  updateState(e.detail); });
-  window.addEventListener('t1:state-right', (e) => { if (slot === 'right') updateState(e.detail); });
+  window.addEventListener('t1:state-left',  (e) => { if (slot === 'left')  updateState(e.detail || null); });
+  window.addEventListener('t1:state-right', (e) => { if (slot === 'right') updateState(e.detail || null); });
+
+  window.addEventListener('t1:scope-changed', (event) => {
+    if (slot !== 'solo') return;
+    const detail = event.detail || {};
+    if (typeof detail.local === 'boolean') scopeFlags.local = detail.local;
+    if (typeof detail.state === 'boolean') scopeFlags.state = detail.state;
+    if (typeof detail.federal === 'boolean') scopeFlags.federal = detail.federal;
+    if (!currentState) {
+      if (!scopeFlags.state && !scopeFlags.federal) {
+        if (chipTotal) chipTotal.textContent = '--';
+        if (chipEff) chipEff.textContent = '--';
+        setPlaceholderRow('Enable a scope to view totals.');
+      }
+      return;
+    }
+    requestAnimationFrame(() => computeDemoBreakdown(currentState));
+  });
 
   // Copy link (local toolbar)
   copyBtn?.addEventListener('click', async () => {
@@ -645,8 +768,8 @@ const slot = compareSlot ?? 'solo';
 
   // Open chart (pie modal)
   pieBtn?.addEventListener('click', () => {
-    const code = root.getAttribute('data-state') || 'â€”';
-    const html = buildPieHTML(`${code} â€” tax mix`, _lastSegments);
+    if (!currentState || !_lastSegments.length) return;
+    const html = buildPieHTML(`${currentState} tax mix`, _lastSegments);
     window.dispatchEvent(new CustomEvent('t1:modal-open', { detail: { title: 'Tax composition', html } }));
   });
 
@@ -655,9 +778,9 @@ const slot = compareSlot ?? 'solo';
     const url  = new URL(location.href);
     const fips = url.searchParams.get('fips');
     const st   = url.searchParams.get('state');
-    updateState(st || fips || root.getAttribute('data-state') || 'CA');
+    updateState(st || fips || initialCode || null);
   } catch {
-    updateState(root.getAttribute('data-state') || 'CA');
+    updateState(initialCode || null);
   }
 })();
 </script>

@@ -16,14 +16,19 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - name: Run fetchers (offline-friendly)
+      - name: Run fetchers (live if allowed)
+        env:
+          LIVE_SOURCES: ${{ vars.LIVE_SOURCES || '1' }}
+          SOURCES_DATE: ${{ env.SOURCES_DATE }}
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
         run: |
-          node scripts/fetch/fetch_income.mjs || true
-          node scripts/fetch/fetch_sales.mjs || true
-          node scripts/fetch/fetch_property.mjs || true
-          node scripts/fetch/fetch_fuel.mjs || true
-          node scripts/fetch/fetch_excise.mjs || true
-          node scripts/fetch/fetch_federal.mjs || true
+          export SOURCES_DATE=$(date -u +"%F")
+          node scripts/fetch/orchestrate.mjs
+      - name: Validate partials (fail fast)
+        env:
+          LIVE_SOURCES: ${{ vars.LIVE_SOURCES || '1' }}
+        run: |
+          node scripts/validate/check-partials.mjs
       - name: Compose and validate
         run: |
           node scripts/build_pack.mjs

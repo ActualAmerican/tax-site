@@ -1,0 +1,140 @@
+<div class="scope-card__body stack">
+  <label class="field">
+    <span class="field__label">Filing status</span>
+    <select id="fs" aria-label="Filing status">
+      <option value="single" selected>Single</option>
+      <option value="married">Married</option>
+    </select>
+  </label>
+
+  <label class="field">
+    <span class="field__label">Household income ($)</span>
+    <input
+      id="inc"
+      type="text"
+      inputmode="numeric"
+      pattern="[0-9,]*"
+      value="60000"
+      aria-label="Income in dollars"
+    />
+  </label>
+
+  <div class="field">
+    <span class="field__label">Homeowner?</span>
+    <div
+      class="toggle-group"
+      data-target="ho"
+      role="radiogroup"
+      aria-label="Homeowner"
+    >
+      <button type="button" role="radio" data-value="1" aria-checked="true" tabindex="0">Yes</button>
+      <button type="button" role="radio" data-value="0" aria-checked="false" tabindex="-1">No (renter)</button>
+    </div>
+    <input id="ho" type="hidden" value="1" />
+  </div>
+
+  <label class="field">
+    <span class="field__label">Home value ($)</span>
+    <input
+      id="hv"
+      type="text"
+      inputmode="numeric"
+      pattern="[0-9,]*"
+      value="300000"
+      aria-label="Home value in dollars"
+    />
+    <span class="muted-note">Used to estimate annual property tax (statewide effective rate).</span>
+  </label>
+
+  <details class="disclosure">
+    <summary class="label">
+      Optional excise
+    </summary>
+    <div class="muted-note">Only affects excise rows in the breakdown.</div>
+    <div class="grid">
+      <label class="field">
+        <span class="field__label">Cig packs per week</span>
+        <input
+          id="cig"
+          type="number"
+          value="0"
+          min="0"
+          step="0.1"
+          aria-label="Cigarette packs per week"
+        />
+      </label>
+      <label class="field">
+        <span class="field__label">Alcohol units per week</span>
+        <input
+          id="alc"
+          type="number"
+          value="0"
+          min="0"
+          step="1"
+          aria-label="Alcohol units per week"
+        />
+      </label>
+    </div>
+  </details>
+
+  <details class="disclosure">
+    <summary class="label">More options</summary>
+    <div class="grid">
+      <label class="field">
+        <span class="field__label">Miles per year</span>
+        <input
+          id="mi"
+          type="text"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          value="12000"
+          aria-label="Miles driven per year"
+        />
+      </label>
+      <label class="field">
+        <span class="field__label">Miles per gallon</span>
+        <input
+          id="mpg"
+          type="text"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          value="28"
+          aria-label="Vehicle miles per gallon"
+        />
+      </label>
+    </div>
+    <div class="grid">
+      <label class="field">
+        <span class="field__label">
+          Spending share
+          <span class="badge" id="ssb" aria-live="polite">60%</span>
+        </span>
+        <input
+          id="ss"
+          type="range"
+          min="0.2"
+          max="0.95"
+          step="0.01"
+          value="0.60"
+          aria-label="Spending share"
+        />
+      </label>
+      <label class="field">
+        <span class="field__label">
+          Taxable share
+          <span class="badge" id="tsb" aria-live="polite">55%</span>
+        </span>
+        <input
+          id="ts"
+          type="range"
+          min="0.2"
+          max="0.95"
+          step="0.01"
+          value="0.55"
+          aria-label="Taxable share"
+        />
+      </label>
+    </div>
+  </details>
+</div>
+

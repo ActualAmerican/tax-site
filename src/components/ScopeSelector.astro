@@ -1,0 +1,157 @@
+---
+const defaults = Astro.props?.initialScopes ?? { local: false, state: true, federal: true };
+const serialize = (val: boolean) => (val ? '1' : '0');
+---
+
+<div
+  class="scope-selector"
+  data-component="scope-selector"
+  data-local={serialize(defaults.local)}
+  data-state={serialize(defaults.state)}
+  data-federal={serialize(defaults.federal)}
+>
+  <div class="scope-selector__header">
+    <h2 class="scope-selector__title">Scope</h2>
+    <span class="scope-selector__hint">Toggle the tax layers you want to model.</span>
+  </div>
+  <div class="scope-selector__chips" role="group" aria-label="Scope selection">
+    <button type="button" data-scope="local" aria-pressed={defaults.local ? 'true' : 'false'}>
+      Local
+    </button>
+    <button type="button" data-scope="state" aria-pressed={defaults.state ? 'true' : 'false'}>
+      State
+    </button>
+    <button type="button" data-scope="federal" aria-pressed={defaults.federal ? 'true' : 'false'}>
+      Federal
+    </button>
+  </div>
+</div>
+
+<script type="module">
+  (function initScopeSelector() {
+    const script = document.currentScript;
+    if (!script) return;
+    const root = script.previousElementSibling;
+    if (!root || !root.matches('[data-component="scope-selector"]')) return;
+
+    const state = {
+      local: root.getAttribute('data-local') === '1',
+      state: root.getAttribute('data-state') !== '0',
+      federal: root.getAttribute('data-federal') !== '0',
+    };
+    let hasState = false;
+    let userInteractedLocal = false;
+    const localButton = root.querySelector('button[data-scope="local"]');
+
+    const minActive = () => {
+      return Number(state.local) + Number(state.state) + Number(state.federal) >= 1;
+    };
+
+    const FIPS_TO_CODE = {
+      '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL','13':'GA',
+      '15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD','25':'MA',
+      '26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE','32':'NV','33':'NH','34':'NJ','35':'NM','36':'NY',
+      '37':'NC','38':'ND','39':'OH','40':'OK','41':'OR','42':'PA','44':'RI','45':'SC','46':'SD','47':'TN','48':'TX',
+      '49':'UT','50':'VT','51':'VA','53':'WA','54':'WV','55':'WI','56':'WY','72':'PR'
+    };
+    const normalizeStateCode = (input) => {
+      if (!input) return null;
+      if (typeof input === 'object') {
+        if (input.code) return normalizeStateCode(input.code);
+        if (input.fips && FIPS_TO_CODE[input.fips]) return FIPS_TO_CODE[input.fips];
+      }
+      const s = String(input).toUpperCase();
+      if (/^[A-Z]{2}$/.test(s)) return s;
+      if (FIPS_TO_CODE[s]) return FIPS_TO_CODE[s];
+      return null;
+    };
+
+    function apply() {
+      root.setAttribute('data-local', state.local ? '1' : '0');
+      root.setAttribute('data-state', state.state ? '1' : '0');
+      root.setAttribute('data-federal', state.federal ? '1' : '0');
+      const buttons = root.querySelectorAll('button[data-scope]');
+      buttons.forEach((btn) => {
+        const scope = btn.getAttribute('data-scope');
+        if (!scope) return;
+        const active = !!state[scope];
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        btn.classList.toggle('is-active', active);
+      });
+      window.dispatchEvent(
+        new CustomEvent('t1:scope-changed', {
+          detail: { ...state },
+        }),
+      );
+    }
+
+    function updateLocalAvailability() {
+      if (!localButton) return;
+      if (!hasState) {
+        localButton.setAttribute('disabled', '');
+        localButton.setAttribute('aria-disabled', 'true');
+        if (state.local) {
+          state.local = false;
+          apply();
+        }
+      } else {
+        localButton.removeAttribute('disabled');
+        localButton.removeAttribute('aria-disabled');
+      }
+    }
+
+    root.addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-scope]');
+      if (!btn) return;
+      if (btn.hasAttribute('disabled')) return;
+      const scope = btn.getAttribute('data-scope');
+      if (!scope || !(scope in state)) return;
+
+      const next = !state[scope];
+      state[scope] = next;
+      if (!minActive()) {
+        state[scope] = true;
+        return;
+      }
+      if (scope === 'local') {
+        userInteractedLocal = true;
+      }
+      apply();
+    });
+
+    root.addEventListener('keydown', (event) => {
+      const key = event.key;
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+      event.preventDefault();
+      const buttons = Array.from(root.querySelectorAll('button[data-scope]'));
+      if (!buttons.length) return;
+      const focusedIndex = buttons.findIndex((btn) => btn === root.ownerDocument.activeElement);
+      const currentIndex = focusedIndex >= 0 ? focusedIndex : buttons.findIndex((btn) => btn.classList.contains('is-active'));
+      let nextIndex = currentIndex >= 0 ? currentIndex : 0;
+      if (key === 'ArrowLeft') nextIndex = (nextIndex - 1 + buttons.length) % buttons.length;
+      if (key === 'ArrowRight') nextIndex = (nextIndex + 1) % buttons.length;
+      if (key === 'Home') nextIndex = 0;
+      if (key === 'End') nextIndex = buttons.length - 1;
+      const next = buttons[nextIndex];
+      if (!next) return;
+      next.focus();
+    });
+
+    window.addEventListener('t1:state', (event) => {
+      const code = normalizeStateCode(event.detail);
+      const prevHasState = hasState;
+      hasState = !!code;
+      updateLocalAvailability();
+      if (hasState && !prevHasState && !state.local && !userInteractedLocal) {
+        state.local = true;
+        apply();
+      }
+      if (!hasState) {
+        userInteractedLocal = false;
+      }
+    });
+
+    apply();
+    updateLocalAvailability();
+  })();
+</script>

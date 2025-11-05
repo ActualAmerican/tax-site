@@ -1,96 +1,60 @@
+﻿---
+import ScopeSelector from './ScopeSelector.astro';
+import LocalityPicker from './LocalityPicker.astro';
+import InputsLocal from './InputsLocal.astro';
+import InputsState from './InputsState.astro';
+import InputsFederal from './InputsFederal.astro';
 ---
-/* Pure Astro markup; browser wiring lives in a small client script below */
----
-<form class="stack" aria-label="Tax inputs">
-  <div class="label"><span>Filing status</span></div>
-  <select id="fs" aria-label="Filing status">
-    <option value="single" selected>Single</option>
-    <option value="married">Married</option>
-  </select>
 
-  <div class="label"><span>Income ($)</span></div>
-  <input id="inc" type="text" inputmode="numeric" pattern="[0-9,]*" value="60000" aria-label="Income in dollars" />
-
-
-  <div class="label"><span>Homeowner?</span></div>
-<div class="segmented" data-for="ho"></div>
-<select id="ho" aria-label="Homeowner">
-  <option value="1" selected>Yes</option>
-  <option value="0">No (renter)</option>
-</select>
-
-  <div class="label"><span>Home value ($)</span></div>
-  <input id="hv" type="text" inputmode="numeric" pattern="[0-9,]*" value="300000" aria-label="Home value in dollars" />
-  <div class="muted-note">Used to estimate annual property tax (statewide effective rate).</div>
-
-    <div class="grid">
-    <div>
-      <div class="label"><span>Miles/year</span></div>
-      <input id="mi" type="text" inputmode="numeric" pattern="[0-9]*" value="12000" aria-label="Miles driven per year" />
-    </div>
-    <div>
-      <div class="label"><span>MPG</span></div>
-      <input id="mpg" type="text" inputmode="numeric" pattern="[0-9]*" value="28" aria-label="Vehicle miles per gallon" />
-    </div>
-  </div>
-
-    <div class="grid">
-    <div>
-      <div class="label"><span>Spending share</span><span class="badge" id="ssb" aria-live="polite">60%</span></div>
-      <input id="ss" type="range" min="0.2" max="0.95" step="0.01" value="0.60" aria-label="Spending share" />
-    </div>
-    <div>
-      <div class="label"><span>Taxable share</span><span class="badge" id="tsb" aria-live="polite">55%</span></div>
-      <input id="ts" type="range" min="0.2" max="0.95" step="0.01" value="0.55" aria-label="Taxable share" />
-    </div>
-  </div>
-
-  <details class="disclosure">
-    <summary class="label">Optional excise</summary>
-    <div class="grid">
+<form class="inputs-panel stack" aria-label="Tax inputs">
+  <ScopeSelector />
+  <section class="scope-card scope-card--local" data-scope-card="local" hidden aria-hidden="true">
+    <header class="scope-card__header">
       <div>
-        <div class="label"><span>Cig packs/week</span></div>
-  <input id="cig" type="number" value="0" min="0" step="0.1" aria-label="Cigarette packs per week" />
+        <span class="scope-card__badge scope-card__badge--local">Local</span>
+        <h3 class="scope-card__heading">Local taxes</h3>
       </div>
+      <p class="scope-card__desc">City, county, and district add-ons.</p>
+    </header>
+    <LocalityPicker />
+    <InputsLocal />
+  </section>
+
+  <section class="scope-card scope-card--state" data-scope-card="state" aria-hidden="false">
+    <header class="scope-card__header">
       <div>
-        <div class="label"><span>Alcohol units/week</span></div>
-  <input id="alc" type="number" value="0" min="0" step="1" aria-label="Alcohol units per week" />
+        <span class="scope-card__badge scope-card__badge--state">State</span>
+        <h3 class="scope-card__heading">State taxes</h3>
       </div>
-    </div>
-  </details>
+      <p class="scope-card__desc">Income, property, sales, motor fuel, and excise.</p>
+    </header>
+    <InputsState />
+  </section>
 
-  <details class="disclosure">
-    <summary class="label">Federal options</summary>
-    <div class="grid">
-            <div>
-        <div class="label"><span>Include federal?</span></div>
-        <div class="segmented" data-for="fed"></div>
-        <select id="fed" aria-label="Include federal">
-          <option value="1">Yes</option>
-          <option value="0" selected>No</option>
-        </select>
-        <div class="muted-note">Adds Federal income, payroll, and LTCG (if set) to the breakdown.</div>
+  <section class="scope-card scope-card--federal" data-scope-card="federal" aria-hidden="false">
+    <header class="scope-card__header">
+      <div>
+        <span class="scope-card__badge scope-card__badge--federal">Federal</span>
+        <h3 class="scope-card__heading">Federal taxes</h3>
       </div>
-
-            <div>
-        <div class="label"><span>Long-term cap gains ($)</span></div>
-        <input id="ltcg" type="text" value="0" aria-label="Long-term capital gains" />
-        <div class="muted-note">Only affects the “LTCG” row when “Include federal” is on.</div>
-      </div>
-    </div>
-  </details>
+      <p class="scope-card__desc">Income, payroll, and capital gains layers.</p>
+    </header>
+    <InputsFederal />
+  </section>
 </form>
 
 <script type="module">
-/* Inputs client: live format, instant emit, segmented toggles */
+/* Inputs client: live format, instant emit, toggle groups + scopes */
 (function () {
   const $ = (id) => document.getElementById(id);
 
-  // --- Local URL helpers (avoid inline import issues) ------------------------
-  function currentURL(){ try { return new URL(window.location.href); } catch { return null; } }
-  function readInputsFromURL(u){
+  const scopeState = { local: false, state: true, federal: true };
+  let lastFederalPreference = true;
+
+  function currentURL() { try { return new URL(window.location.href); } catch { return null; } }
+  function readInputsFromURL(u) {
     const gp = (k) => u.searchParams.get(k);
-    const pnum = (v) => Number(String(v||'').replace(/[^0-9.-]/g,'')) || 0;
+    const pnum = (v) => Number(String(v || '').replace(/[^0-9.-]/g, '')) || 0;
     return {
       filingStatus: gp('fs') || 'single',
       income: gp('inc') ? pnum(gp('inc')) : 60000,
@@ -102,17 +66,17 @@
       taxableShare: gp('ts') ? +gp('ts') : 0.55,
       cigPacksPerWeek: gp('cig') ? +gp('cig') : 0,
       alcoholUnitsPerWeek: gp('alc') ? +gp('alc') : 0,
-      includeFederal: (gp('fed') ?? '0') === '1',
+      includeFederal: (gp('fed') ?? '1') === '1',
       ltcg: gp('ltcg') ? pnum(gp('ltcg')) : 0,
     };
   }
-  function writeInputsToURL(u, i){
+  function writeInputsToURL(u, i) {
     const sp = u.searchParams;
-    const set = (k, v) => { if (v==null || v==='' || v===0) sp.delete(k); else sp.set(k, String(v)); };
+    const set = (k, v) => { if (v == null || v === '' || v === 0) sp.delete(k); else sp.set(k, String(v)); };
     set('fs', i.filingStatus);
-    set('inc', i.income|0);
+    set('inc', i.income | 0);
     set('ho', i.homeowner ? '1' : '0');
-    set('hv', i.homeValue|0);
+    set('hv', i.homeValue | 0);
     set('mi', i.miles);
     set('mpg', i.mpg);
     set('ss', i.spendingShare);
@@ -124,13 +88,12 @@
     return u;
   }
 
-  // ---- Number formatting + caret-preserving parser --------------------------
   function parseNum(v) {
     if (v == null) return 0;
     return Number(String(v).replace(/[^0-9.-]/g, '')) || 0;
   }
   const nf = new Intl.NumberFormat('en-US');
-  function fmtNum(n){ return nf.format(n|0); }
+  function fmtNum(n) { return nf.format(n | 0); }
 
   function attachLiveFormatter(inputEl) {
     if (!inputEl) return;
@@ -143,7 +106,8 @@
       const raw = parseNum(el.value);
       el.value = raw ? fmtNum(raw) : '';
 
-      let seen = 0, pos = 0;
+      let seen = 0;
+      let pos = 0;
       while (pos < el.value.length && seen < offsetDigits) {
         if (/[0-9]/.test(el.value[pos])) seen++;
         pos++;
@@ -154,8 +118,6 @@
     inputEl.addEventListener('keyup', handler);
     inputEl.addEventListener('change', handler);
 
-    // Extra: while focused, enforce formatting every frame to survive other
-    // scripts tweaking value order. Stops on blur.
     let running = false;
     const tick = () => {
       if (!running) return;
@@ -167,136 +129,221 @@
         const before = el.value.slice(0, start);
         const offsetDigits = (before.match(/[0-9]/g) || []).length;
         el.value = formatted;
-        let seen=0,pos=0; while(pos<el.value.length && seen<offsetDigits){ if(/[0-9]/.test(el.value[pos])) seen++; pos++; }
-        try { el.setSelectionRange(pos,pos); } catch {}
+        let seen = 0;
+        let pos = 0;
+        while (pos < el.value.length && seen < offsetDigits) {
+          if (/[0-9]/.test(el.value[pos])) seen++;
+          pos++;
+        }
+        try { el.setSelectionRange(pos, pos); } catch {}
       }
       requestAnimationFrame(tick);
     };
     inputEl.addEventListener('focus', () => { if (!running) { running = true; requestAnimationFrame(tick); } });
-    inputEl.addEventListener('blur',  () => { running = false; });
+    inputEl.addEventListener('blur', () => { running = false; });
   }
 
-  // ---- Initialize controls from URL (fallback to current DOM defaults) ------
-  const init = (()=>{ const u = currentURL(); return u ? readInputsFromURL(u) : {
-    filingStatus: 'single', income: 60000, homeowner:true, homeValue:300000,
-    miles:12000, mpg:28, spendingShare:0.6, taxableShare:0.55, cigPacksPerWeek:0, alcoholUnitsPerWeek:0,
-    includeFederal:false, ltcg:0
-  }; })();
+  const init = (() => {
+    const u = currentURL();
+    const defaults = {
+      filingStatus: 'single',
+      income: 60000,
+      homeowner: true,
+      homeValue: 300000,
+      miles: 12000,
+      mpg: 28,
+      spendingShare: 0.6,
+      taxableShare: 0.55,
+      cigPacksPerWeek: 0,
+      alcoholUnitsPerWeek: 0,
+      includeFederal: true,
+      ltcg: 0,
+    };
+    if (!u) return defaults;
+    try {
+      const parsed = readInputsFromURL(u);
+      return { ...defaults, ...parsed };
+    } catch {
+      return defaults;
+    }
+  })();
 
-  // Push URL-derived values into controls (so UI reflects URL on first paint)
-  if ($('fs'))  $('fs').value  = init.filingStatus;
+  if ($('fs')) $('fs').value = init.filingStatus;
   if ($('inc')) $('inc').value = fmtNum(init.income);
-  if ($('ho'))  $('ho').value  = init.homeowner ? '1' : '0';
-  if ($('hv'))  $('hv').value  = fmtNum(init.homeValue);
-  if ($('mi'))  $('mi').value  = String(init.miles);
+  if ($('ho')) $('ho').value = init.homeowner ? '1' : '0';
+  if ($('hv')) $('hv').value = fmtNum(init.homeValue);
+  if ($('mi')) $('mi').value = String(init.miles);
   if ($('mpg')) $('mpg').value = String(init.mpg);
-  if ($('ss'))  $('ss').value  = String(init.spendingShare);
-  if ($('ts'))  $('ts').value  = String(init.taxableShare);
-  const _ssb = document.getElementById('ssb'); if (_ssb) _ssb.textContent = Math.round(init.spendingShare * 100) + '%';
-  const _tsb = document.getElementById('tsb'); if (_tsb) _tsb.textContent = Math.round(init.taxableShare  * 100) + '%';
+  if ($('ss')) $('ss').value = String(init.spendingShare);
+  if ($('ts')) $('ts').value = String(init.taxableShare);
   if ($('cig')) $('cig').value = String(init.cigPacksPerWeek);
   if ($('alc')) $('alc').value = String(init.alcoholUnitsPerWeek);
   if ($('fed')) $('fed').value = init.includeFederal ? '1' : '0';
   if ($('ltcg')) $('ltcg').value = fmtNum(init.ltcg);
 
-  // ---- State (kept simple and flat) -----------------------------------------
-  const state = { ...init };
+  const ssBadge = document.getElementById('ssb');
+  if (ssBadge) ssBadge.textContent = Math.round(init.spendingShare * 100) + '%';
+  const tsBadge = document.getElementById('tsb');
+  if (tsBadge) tsBadge.textContent = Math.round(init.taxableShare * 100) + '%';
 
-  // ---- Emit helper (updates URL, then notifies listeners) -------------------
+  const state = { ...init };
+  lastFederalPreference = state.includeFederal;
+
+  const toggleControllers = new Map();
+
   function emit() {
-    const cu = currentURL(); if (!cu) return;
+    const cu = currentURL();
+    if (!cu) return;
     const u = writeInputsToURL(cu, state);
     history.replaceState({}, '', u);
-    // Microtask so live-formatters settle before recompute
     queueMicrotask(() => {
       window.dispatchEvent(new CustomEvent('t1:inputs', { detail: { ...state } }));
     });
   }
 
-  // ---- Segmented toggle enhancement (hides original <select>) ---------------
-  function enhanceSegmented(container) {
-    if (!container) return;
-    const selectId = container.getAttribute('data-for');
-    const sel = $(selectId);
-    if (!sel) return;
+  function initToggleGroup(targetId, updater) {
+    const hidden = $(targetId);
+    const container = document.querySelector(`.toggle-group[data-target="${targetId}"]`);
+    if (!hidden || !container) return;
+    const buttons = Array.from(container.querySelectorAll('button[data-value]'));
+    if (!buttons.length) return;
 
-    container.setAttribute('data-enhanced', '1');
-    container.innerHTML = `
-      <div role="group" class="seg-buttons">
-        <button type="button" data-val="1" aria-pressed="${sel.value==='1'}">Yes</button>
-        <button type="button" data-val="0" aria-pressed="${sel.value==='0'}">No</button>
-      </div>
-    `;
-    // Hide the original select to avoid duplicate controls (kept in DOM for a11y/fallback)
-    try { sel.style.display = 'none'; } catch {}
+    const activate = (value, shouldEmit = true) => {
+      hidden.value = value;
+      buttons.forEach((btn) => {
+        const isActive = btn.getAttribute('data-value') === value;
+        btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+        btn.tabIndex = isActive ? 0 : -1;
+        btn.classList.toggle('is-active', isActive);
+      });
+      if (typeof updater === 'function') updater(value);
+      if (shouldEmit) emit();
+    };
 
     container.addEventListener('click', (ev) => {
-      const btn = ev.target.closest('button[data-val]');
+      const btn = ev.target.closest('button[data-value]');
       if (!btn) return;
-      const v = btn.getAttribute('data-val');
-      sel.value = v;
-      container.querySelectorAll('button[data-val]').forEach(b => {
-        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
-      });
-      if (selectId === 'ho')  state.homeowner      = (v === '1');
-      if (selectId === 'fed') state.includeFederal = (v === '1');
-      emit();
+      const value = btn.getAttribute('data-value');
+      if (!value) return;
+      activate(value);
+      btn.focus();
+    });
+
+    container.addEventListener('keydown', (ev) => {
+      const key = ev.key;
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+      ev.preventDefault();
+      const currentIndex = buttons.findIndex((btn) => btn.getAttribute('aria-checked') === 'true');
+      let nextIndex = currentIndex >= 0 ? currentIndex : 0;
+      if (key === 'ArrowLeft') nextIndex = (nextIndex - 1 + buttons.length) % buttons.length;
+      if (key === 'ArrowRight') nextIndex = (nextIndex + 1) % buttons.length;
+      if (key === 'Home') nextIndex = 0;
+      if (key === 'End') nextIndex = buttons.length - 1;
+      const next = buttons[nextIndex];
+      if (!next) return;
+      activate(next.getAttribute('data-value'));
+      next.focus();
+    });
+
+    activate(hidden.value || buttons[0].getAttribute('data-value'), false);
+    toggleControllers.set(targetId, { activate });
+  }
+
+  document.getElementById('fs')?.addEventListener('change', (e) => {
+    state.filingStatus = e.target.value;
+    emit();
+  });
+
+  const incEl = $('inc'); attachLiveFormatter(incEl);
+  incEl?.addEventListener('input', (e) => { state.income = parseNum(e.target.value); emit(); });
+
+  const hvEl = $('hv'); attachLiveFormatter(hvEl);
+  hvEl?.addEventListener('input', (e) => { state.homeValue = parseNum(e.target.value); emit(); });
+
+  const miEl = $('mi'); attachLiveFormatter(miEl);
+  miEl?.addEventListener('input', (e) => { state.miles = +parseNum(e.target.value) || 0; emit(); });
+
+  const mpgEl = $('mpg'); attachLiveFormatter(mpgEl);
+  mpgEl?.addEventListener('input', (e) => { state.mpg = +parseNum(e.target.value) || 1; emit(); });
+
+  $('ss')?.addEventListener('input', (e) => {
+    state.spendingShare = +e.target.value;
+    if (ssBadge) ssBadge.textContent = Math.round(state.spendingShare * 100) + '%';
+    emit();
+  });
+
+  $('ts')?.addEventListener('input', (e) => {
+    state.taxableShare = +e.target.value;
+    if (tsBadge) tsBadge.textContent = Math.round(state.taxableShare * 100) + '%';
+    emit();
+  });
+
+  $('cig')?.addEventListener('input', (e) => { state.cigPacksPerWeek = +e.target.value || 0; emit(); });
+  $('alc')?.addEventListener('input', (e) => { state.alcoholUnitsPerWeek = +e.target.value || 0; emit(); });
+
+  const ltcgEl = $('ltcg'); attachLiveFormatter(ltcgEl);
+  ltcgEl?.addEventListener('input', (e) => { state.ltcg = parseNum(e.target.value); emit(); });
+
+  initToggleGroup('ho', (value) => { state.homeowner = (value === '1'); });
+  initToggleGroup('fed', (value) => {
+    const active = value === '1';
+    state.includeFederal = active;
+    lastFederalPreference = active;
+    if ($('fed')) $('fed').value = active ? '1' : '0';
+  });
+
+  function applyScopeVisibility() {
+    document.querySelectorAll('[data-scope-card]').forEach((card) => {
+      const scope = card.getAttribute('data-scope-card');
+      if (!scope) return;
+      const active = !!scopeState[scope];
+      if (active) {
+        card.removeAttribute('hidden');
+        card.setAttribute('aria-hidden', 'false');
+      } else {
+        card.setAttribute('hidden', '');
+        card.setAttribute('aria-hidden', 'true');
+      }
     });
   }
 
-  // ---- Wire up events (instant update on input) -----------------------------
-  $('fs')?.addEventListener('change', e => { state.filingStatus = e.target.value; emit(); });
+  window.addEventListener('t1:scope-changed', (event) => {
+    const detail = event.detail || {};
+    const prevFederal = scopeState.federal;
+    ['local', 'state', 'federal'].forEach((scope) => {
+      if (typeof detail[scope] === 'boolean') {
+        scopeState[scope] = detail[scope];
+      }
+    });
+    applyScopeVisibility();
 
-  const incEl = $('inc'); attachLiveFormatter(incEl);
-  incEl?.addEventListener('input',  e => { state.income = parseNum(e.target.value); emit(); });
-
-  const hvEl  = $('hv');  attachLiveFormatter(hvEl);
-  hvEl?.addEventListener('input',   e => { state.homeValue = parseNum(e.target.value); emit(); });
-
-  const miEl = $('mi'); attachLiveFormatter(miEl);
-  miEl?.addEventListener('input',  e => { state.miles = +parseNum(e.target.value) || 0; emit(); });
-
-  const mpgEl = $('mpg'); attachLiveFormatter(mpgEl);
-  mpgEl?.addEventListener('input', e => { state.mpg   = +parseNum(e.target.value) || 1; emit(); });
-
-  $('ss')?.addEventListener('input',  e => {
-    state.spendingShare = +e.target.value;
-    const b = document.getElementById('ssb');
-    if (b) b.textContent = Math.round(state.spendingShare * 100) + '%';
-    emit();
+    if (prevFederal !== scopeState.federal) {
+      if (!scopeState.federal) {
+        lastFederalPreference = state.includeFederal;
+        if (state.includeFederal) {
+          state.includeFederal = false;
+          toggleControllers.get('fed')?.activate('0', false);
+          if ($('fed')) $('fed').value = '0';
+          emit();
+        }
+      } else {
+        state.includeFederal = lastFederalPreference;
+        toggleControllers.get('fed')?.activate(state.includeFederal ? '1' : '0', false);
+        if ($('fed')) $('fed').value = state.includeFederal ? '1' : '0';
+        emit();
+      }
+    }
   });
 
-  $('ts')?.addEventListener('input',  e => {
-    state.taxableShare  = +e.target.value;
-    const b = document.getElementById('tsb');
-    if (b) b.textContent = Math.round(state.taxableShare * 100) + '%';
-    emit();
-  });
+  applyScopeVisibility();
 
-  $('cig')?.addEventListener('input', e => { state.cigPacksPerWeek = +e.target.value || 0; emit(); });
-  $('alc')?.addEventListener('input', e => { state.alcoholUnitsPerWeek = +e.target.value || 0; emit(); });
-
-  $('fed')?.addEventListener('change', e => { state.includeFederal = (e.target.value === '1'); emit(); });
-
-  const ltcgEl = $('ltcg'); attachLiveFormatter(ltcgEl);
-  ltcgEl?.addEventListener('input', e => { state.ltcg = parseNum(e.target.value); emit(); });
-
-  // Enhance Yes/No segmented controls and hide the selects
-  document.querySelectorAll('.segmented[data-for]').forEach(enhanceSegmented);
-
-  // First paint (normalize text values and emit an initial state)
-  if (incEl) incEl.value = fmtNum(state.income);
-  if (hvEl)  hvEl.value  = fmtNum(state.homeValue);
-  if (ltcgEl)ltcgEl.value= fmtNum(state.ltcg);
-  // Kick a microtask/RAF pass to ensure formatting has the last word
   requestAnimationFrame(() => {
-    if (incEl) incEl.dispatchEvent(new Event('input', { bubbles:false }));
-    if (hvEl)  hvEl.dispatchEvent(new Event('input', { bubbles:false }));
-    if (ltcgEl)ltcgEl.dispatchEvent(new Event('input', { bubbles:false }));
+    incEl?.dispatchEvent(new Event('input', { bubbles: false }));
+    hvEl?.dispatchEvent(new Event('input', { bubbles: false }));
+    ltcgEl?.dispatchEvent(new Event('input', { bubbles: false }));
   });
 
-  // Also format immediately from URL without requiring focus/typing
-  (function formatOnLoad(){
+  (function formatOnLoad() {
     const fields = [incEl, hvEl, miEl, mpgEl, ltcgEl];
     for (const el of fields) {
       if (!el) continue;
@@ -306,18 +353,20 @@
   })();
   emit();
 
-  // Defensive: capture-level formatter for dollar inputs to ensure commas even
-  // if any other listener interferes. Also keeps instant recompute in sync.
   document.addEventListener('input', (ev) => {
     const el = ev.target;
-    if (!(el && el.id && (el.id==='inc' || el.id==='hv' || el.id==='ltcg'))) return;
+    if (!(el && el.id && (el.id === 'inc' || el.id === 'hv' || el.id === 'ltcg'))) return;
     const start = el.selectionStart;
     const before = el.value.slice(0, start);
     const offsetDigits = (before.match(/[0-9]/g) || []).length;
     const raw = parseNum(el.value);
     el.value = raw ? fmtNum(raw) : '';
-    let seen = 0, pos = 0;
-    while (pos < el.value.length && seen < offsetDigits) { if (/[0-9]/.test(el.value[pos])) seen++; pos++; }
+    let seen = 0;
+    let pos = 0;
+    while (pos < el.value.length && seen < offsetDigits) {
+      if (/[0-9]/.test(el.value[pos])) seen++;
+      pos++;
+    }
     try { el.setSelectionRange(pos, pos); } catch {}
   }, true);
 })();

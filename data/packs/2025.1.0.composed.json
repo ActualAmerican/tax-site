@@ -1,7 +1,7 @@
 {
   "registry": {
     "pack_version": "2025.1.0",
-    "built_at": "2025-10-29T11:31:06.477Z",
+    "built_at": "2025-11-04T08:16:35.370Z",
     "sources": [
       {
         "metric": "income",
@@ -45,7 +45,7 @@
         "checked_at": "2025-10-05"
       }
     ],
-    "hash": "sha256:b996b2b552149efd64df212143ddc306440d2c85d5b897a802d4d999ca720ec8"
+    "hash": "sha256:2ec61ceb9664644771d19ee1d58d52f0a7134fe7df6fd0387c3f7368f83c013f"
   },
   "income": [
     {
@@ -54,7 +54,10 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AL",
@@ -62,15 +65,21 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AR",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AZ",
@@ -78,7 +87,10 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CA",
@@ -99,39 +111,54 @@
           "up_to": null,
           "rate": 0.093
         }
-      ]
+      ],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CO",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CT",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "DC",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "DE",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "FL",
@@ -139,167 +166,230 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "GA",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "HI",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IA",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ID",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IL",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IN",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "KS",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "KY",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "LA",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MA",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MD",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ME",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MI",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MN",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MO",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MS",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MT",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NC",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ND",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NE",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NH",
@@ -307,7 +397,10 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NJ",
@@ -328,15 +421,21 @@
           "up_to": null,
           "rate": 0.0637
         }
-      ]
+      ],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NM",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NV",
@@ -344,63 +443,87 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NY",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OH",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OK",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OR",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "PA",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "RI",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "SC",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "SD",
@@ -408,7 +531,10 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "TN",
@@ -416,7 +542,10 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "TX",
@@ -424,31 +553,43 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "UT",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "VA",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "VT",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WA",
@@ -456,23 +597,32 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WI",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WV",
       "year": 2025,
       "has_income_tax": true,
-      "standard_deduction": null,
+      "standard_deduction": 0,
       "flat": null,
-      "brackets": null
+      "brackets": [],
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WY",
@@ -480,7 +630,10 @@
       "has_income_tax": false,
       "standard_deduction": null,
       "flat": null,
-      "brackets": null
+      "brackets": null,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     }
   ],
   "sales": [
@@ -489,357 +642,510 @@
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AL",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AR",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AZ",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CA",
       "year": 2025,
       "state_rate": 0.0625,
       "avg_local_rate": 0.013,
-      "combined_rate": 0.0755
+      "combined_rate": 0.0755,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CO",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CT",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "DC",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "DE",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "FL",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "GA",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "HI",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IA",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ID",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IL",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IN",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "KS",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "KY",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "LA",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MA",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MD",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ME",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MI",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MN",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MO",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MS",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MT",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NC",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ND",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NE",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NH",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NJ",
       "year": 2025,
       "state_rate": 0.06625,
       "avg_local_rate": 0,
-      "combined_rate": 0.06625
+      "combined_rate": 0.06625,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NM",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NV",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NY",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OH",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OK",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OR",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "PA",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "RI",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "SC",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "SD",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "TN",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "TX",
       "year": 2025,
       "state_rate": 0.0625,
       "avg_local_rate": 0.019,
-      "combined_rate": 0.0815
+      "combined_rate": 0.0815,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "UT",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "VA",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "VT",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WA",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WI",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WV",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WY",
       "year": 2025,
       "state_rate": 0,
       "avg_local_rate": 0,
-      "combined_rate": 0
+      "combined_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     }
   ],
   "property": [
@@ -847,564 +1153,870 @@
       "state": "AK",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AL",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AR",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AZ",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CA",
       "year": 2025,
       "effective_rate": 0.0076,
-      "method": "ACS (tax/home value)"
+      "method": "ACS (tax/home value)",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CO",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CT",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "DC",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "DE",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "FL",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "GA",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "HI",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IA",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ID",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IL",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IN",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "KS",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "KY",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "LA",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MA",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MD",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ME",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MI",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MN",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MO",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MS",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MT",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NC",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ND",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NE",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NH",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NJ",
       "year": 2025,
       "effective_rate": 0.0219,
-      "method": "ACS (tax/home value)"
+      "method": "ACS (tax/home value)",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NM",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NV",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NY",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OH",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OK",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OR",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "PA",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "RI",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "SC",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "SD",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "TN",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "TX",
       "year": 2025,
       "effective_rate": 0.0168,
-      "method": "ACS (tax/home value)"
+      "method": "ACS (tax/home value)",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "UT",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "VA",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "VT",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WA",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WI",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WV",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WY",
       "year": 2025,
       "effective_rate": 0,
-      "method": "placeholder"
+      "method": "placeholder",
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     }
   ],
   "fuel": [
     {
       "state": "AK",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AL",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AR",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "AZ",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CA",
       "year": 2025,
-      "cents_per_gallon": 66
+      "cents_per_gallon": 66,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CO",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "CT",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "DC",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "DE",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "FL",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "GA",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "HI",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IA",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ID",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IL",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "IN",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "KS",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "KY",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "LA",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MA",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MD",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ME",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MI",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MN",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MO",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MS",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "MT",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NC",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "ND",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NE",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NH",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NJ",
       "year": 2025,
-      "cents_per_gallon": 42.4
+      "cents_per_gallon": 42.4,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NM",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NV",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NY",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OH",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OK",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "OR",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "PA",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "RI",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "SC",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "SD",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "TN",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "TX",
       "year": 2025,
-      "cents_per_gallon": 20
+      "cents_per_gallon": 20,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "UT",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "VA",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "VT",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WA",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WI",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WV",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "WY",
       "year": 2025,
-      "cents_per_gallon": 0
+      "cents_per_gallon": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     }
   ],
   "excise": [
@@ -1412,307 +2024,562 @@
       "state": "AK",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "AL",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "AR",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "AZ",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "CA",
       "year": 2025,
       "cigarette_per_pack": 2.87,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "CO",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "CT",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "DC",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "DE",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "FL",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "GA",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "HI",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "IA",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "ID",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "IL",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "IN",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "KS",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "KY",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "LA",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "MA",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "MD",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "ME",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "MI",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "MN",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "MO",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "MS",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "MT",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "NC",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "ND",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "NE",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "NH",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "NJ",
       "year": 2025,
       "cigarette_per_pack": 2.7,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "NM",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "NV",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "NY",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "OH",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "OK",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "OR",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "PA",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "RI",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "SC",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "SD",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "TN",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "TX",
       "year": 2025,
       "cigarette_per_pack": 1.41,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "UT",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "VA",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "VT",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "WA",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "WI",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "WV",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     },
     {
       "state": "WY",
       "year": 2025,
       "cigarette_per_pack": 0,
-      "alcohol_per_unit": 0
+      "alcohol_per_unit": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01",
+      "cigarette_unit": "per_pack",
+      "alcohol_unit": "per_unit"
     }
   ],
   "federal": {
@@ -1810,25 +2677,514 @@
   },
   "context": [
     {
+      "state": "AK",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "AL",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "AR",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "AZ",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
       "state": "CA",
       "year": 2024,
       "acs_median_income": 90400,
       "bea_rpp": 112.4,
-      "bls_unemp_rate": 5.3
+      "bls_unemp_rate": 5.3,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
-      "state": "TX",
-      "year": 2024,
-      "acs_median_income": 75500,
-      "bea_rpp": 100.5,
-      "bls_unemp_rate": 3.9
+      "state": "CO",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "CT",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "DC",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "DE",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "FL",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "GA",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "HI",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "IA",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "ID",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "IL",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "IN",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "KS",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "KY",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "LA",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "MA",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "MD",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "ME",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "MI",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "MN",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "MO",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "MS",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "MT",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "NC",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "ND",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "NE",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "NH",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     },
     {
       "state": "NJ",
       "year": 2024,
       "acs_median_income": 97000,
       "bea_rpp": 113,
-      "bls_unemp_rate": 4.7
+      "bls_unemp_rate": 4.7,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "NM",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "NV",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "NY",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "OH",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "OK",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "OR",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "PA",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "RI",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "SC",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "SD",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "TN",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "TX",
+      "year": 2024,
+      "acs_median_income": 75500,
+      "bea_rpp": 100.5,
+      "bls_unemp_rate": 3.9,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "UT",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "VA",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "VT",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "WA",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "WI",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "WV",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
+    },
+    {
+      "state": "WY",
+      "year": 2025,
+      "acs_median_income": 0,
+      "bea_rpp": 0,
+      "bls_unemp_rate": 0,
+      "source_url": "https://placeholder.example/t1-bootstrap",
+      "checked_at": "2025-11-04",
+      "effective_date": "2025-01-01"
     }
   ]
 }
