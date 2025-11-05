@@ -1,13 +1,12 @@
 ---
 /* Breakdown panel (bundled module import) */
-const { initialState = null, compareSlot, pack: packProp = null } = Astro.props;
+const { initialState = null, compareSlot } = Astro.props;
 const slot = compareSlot ?? 'solo';
 const initialCode = initialState ?? '';
 const initialLabel = initialState ?? '--';
 const hasInitial = Boolean(initialState);
 const exportHref = hasInitial ? `/report?state=${initialCode}` : '#';
 const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
-const embeddedPack = packProp ? JSON.stringify(packProp).replace(/</g, '\\u003c') : 'null';
 ---
 <div
   class="panel stack"
@@ -58,13 +57,24 @@ const embeddedPack = packProp ? JSON.stringify(packProp).replace(/</g, '\\u003c'
 <!-- Client: listens for state & inputs, renders rows, stacked bar, and manages toolbar -->
 <script type="module">
 (function () {
-  const EMBEDDED_PACK = ${embeddedPack};
-
   // Panel root
   const root =
     (document.currentScript && document.currentScript.previousElementSibling) ||
     document.querySelector('[data-t1-breakdown]');
   if (!root) return;
+
+  const slot       = root.getAttribute('data-slot') || 'solo';
+  const stateLabel = root.querySelector('#bd-state');
+  const exportLink = root.querySelector('#bd-export');
+  const compareLink= root.querySelector('#bd-compare');
+  const copyBtn    = root.querySelector('#bd-copy');
+  const pieBtn     = root.querySelector('#bd-pie');
+  const chipTotal  = root.querySelector('#chip-total');
+  const chipEff    = root.querySelector('#chip-eff');
+  const totEl      = root.querySelector('#tot');
+  const effEl      = root.querySelector('#eff');
+  const barEl      = root.querySelector('#chart');
+  let _lastSegments = []; // current stacked-bar segments used by the pie modal
 
   // Loading and empty states
   const _tbody = root.querySelector('tbody');
@@ -87,17 +97,6 @@ const embeddedPack = packProp ? JSON.stringify(packProp).replace(/</g, '\\u003c'
     setEmptyRow();
   }
 
-  const slot       = root.getAttribute('data-slot') || 'solo';
-  const stateLabel = root.querySelector('#bd-state');
-  const exportLink = root.querySelector('#bd-export');
-  const compareLink= root.querySelector('#bd-compare');
-  const copyBtn    = root.querySelector('#bd-copy');
-  const pieBtn     = root.querySelector('#bd-pie');
-  const chipTotal  = root.querySelector('#chip-total');
-  const chipEff    = root.querySelector('#chip-eff');
-  const totEl      = root.querySelector('#tot');
-  const effEl      = root.querySelector('#eff');
-  const barEl      = root.querySelector('#chart');
   const scopeFlags = { local: false, state: true, federal: true };
   function applyToolbarState() {
     const active = Boolean(currentState);
@@ -189,56 +188,66 @@ const embeddedPack = packProp ? JSON.stringify(packProp).replace(/</g, '\\u003c'
   // Ignore stale async renders
   let _seq = 0;
 
-  // Pack fetch/cache (prefers embedded data)
-  let _packCache = (EMBEDDED_PACK && EMBEDDED_PACK !== 'null') ? EMBEDDED_PACK : null;
+  // Pack fetch/cache (prefer globals seeded elsewhere)
+  let _packCache = null;
 
-  if (_packCache) {
-    try {
-      if (!window.__t1_pack) window.__t1_pack = _packCache;
-    } catch (err) {
-      try { console.warn('Breakdown: failed to assign embedded pack', err); } catch (_) {}
-    }
-  }
-
-  function seedPackFromGlobal() {
+  function primePackFromGlobals() {
     if (_packCache) return _packCache;
     try {
-      const seeded = typeof window !== 'undefined' ? window['__t1_pack'] : null;
-      if (seeded) {
+      const w = typeof window !== 'undefined' ? window : null;
+      const seeded = w ? w.__T1_PACK__ || w.__t1_pack || null : null;
+      if (seeded && typeof seeded === 'object') {
         _packCache = seeded;
+        if (w && !w.__T1_PACK__) w.__T1_PACK__ = seeded;
+        if (w && !w.__t1_pack) w.__t1_pack = seeded;
       }
     } catch (err) {
       try { console.warn('Breakdown: failed to read preloaded pack', err); } catch (_) {}
     }
     return _packCache;
   }
-  seedPackFromGlobal();
+  primePackFromGlobals();
 
-  async function loadPack() {
-    if (_packCache) return _packCache;
-    const preloaded = seedPackFromGlobal();
-    if (preloaded) return preloaded;
-    try {
-      const res = await fetch('/data/packs/2025.1.0.json');
-      if (!res.ok) throw new Error('pack fetch failed');
-      _packCache = await res.json();
-      try { if (typeof window !== 'undefined') window['__t1_pack'] = _packCache; } catch {}
+async function loadPack() {
+  if (_packCache) return _packCache;
+  primePackFromGlobals();
+  if (_packCache) return _packCache;
+
+  // 1) Prefer the SSR-injected JSON (fast, always present)
+  try {
+    if (window.__T1_PACK__ && typeof window.__T1_PACK__ === 'object') {
+      _packCache = window.__T1_PACK__;
       return _packCache;
-    } catch (err) {
-      console.warn('Breakdown: failed to load pack', err);
-      _packCache = null;
-      try {
-        const b = root.querySelector('#bd-error');
-        if (b) {
-          b.removeAttribute('hidden');
-          b.textContent = 'Failed to load tax data. Retry?';
-          const btn = document.createElement('button'); btn.textContent = 'Retry'; btn.className='badge'; btn.onclick = () => { b.setAttribute('hidden',''); setLoadingRow(); _packCache=null; computeDemoBreakdown(currentState); };
-          b.appendChild(document.createTextNode(' ')); b.appendChild(btn);
-        }
-      } catch {}
-      return null;
     }
+    const scriptEl = document.getElementById('t1-pack');
+    if (scriptEl && scriptEl.textContent) {
+      _packCache = JSON.parse(scriptEl.textContent);
+      window.__T1_PACK__ = _packCache;
+      return _packCache;
+    }
+  } catch (e) {
+    console.warn('Breakdown: pack inject parse failed', e);
   }
+
+  // 2) Fallback: try to fetch if the file is being served
+  const candidates = [
+    '/data/packs/2025.1.0.composed.json',
+    '/data/packs/2025.1.0.json',
+  ];
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) {
+        _packCache = await res.json();
+        window.__T1_PACK__ = _packCache;
+        return _packCache;
+      }
+    } catch (_) {}
+  }
+
+  console.warn('Breakdown: no pack available (inject or fetch failed)');
+  return null;
+}
 
   function findRow(arr, state) {
     if (!arr) return null;
@@ -379,10 +388,6 @@ const embeddedPack = packProp ? JSON.stringify(packProp).replace(/</g, '\\u003c'
     if (!u.searchParams.get('b')) u.searchParams.set('b','TX');
     return u.toString();
   }
-
-  // state for the chart button
-  let _lastSegments = [];
-
   // Render stacked bar
   function renderStackedBar(segments, total){
     if (!barEl) return;
@@ -527,11 +532,11 @@ const embeddedPack = packProp ? JSON.stringify(packProp).replace(/</g, '\\u003c'
       const p = f.payrollAssumptions || {};
       if (p && p.ssBase != null) {
         payrollTitle = [
-          `Social Security wage base $${Number(p.ssBase).toLocaleString()}`,
-          `OASDI ${(p.ssRate*100).toFixed(1)}%`,
-          `Medicare ${(p.mediRate*100).toFixed(2)}%`,
-          `+ ${(p.addRate*100).toFixed(1)}% above $${Number(p.addThresh).toLocaleString()}`
-        ]].join(' · ');
+  `Social Security wage base $${Number(p.ssBase).toLocaleString()}`,
+  `OASDI ${(p.ssRate*100).toFixed(1)}%`,
+  `Medicare ${(p.mediRate*100).toFixed(2)}%`,
+  `+ ${(p.addRate*100).toFixed(1)}% above $${Number(p.addThresh).toLocaleString()}`
+].join(' · ');
       }
     }
 
@@ -587,8 +592,6 @@ const embeddedPack = packProp ? JSON.stringify(packProp).replace(/</g, '\\u003c'
     const federalDisplayNorm = normalizeDisplay(federalDisplay);
 
     // Update chips + table
-    const totEl = root.querySelector('#tot');
-    const effEl = root.querySelector('#eff');
     if (totEl) totEl.textContent = fmt(total);
     const effRateStr = ((total / Math.max(1, inc)) * 100).toFixed(1) + '%';
     if (effEl) effEl.textContent = effRateStr;
@@ -784,4 +787,6 @@ const embeddedPack = packProp ? JSON.stringify(packProp).replace(/</g, '\\u003c'
   }
 })();
 </script>
+
+
 

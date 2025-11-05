@@ -5,7 +5,9 @@ import Breakdown from '../../components/Breakdown.astro';
 import Assumptions from '../../components/Assumptions.astro';
 import ContextCards from '../../components/ContextCards.astro';
 import pack from '../../../data/packs/2025.1.0.json';
-const packLiteral = JSON.stringify(pack).replace(/</g, '\\u003c');
+const packSerialized = JSON.stringify(pack).replace(/</g, '\\u003c');
+const packInline = `JSON.parse(decodeURIComponent('${encodeURIComponent(packSerialized)}'))`;
+const seedPackScript = `(function(){try{const pack=${packInline};if(!window.__t1_pack)window.__t1_pack=pack;if(!window.__T1_PACK__)window.__T1_PACK__=pack;}catch(err){console.warn('seedPackScript failed',err);}})();`;
 export async function getStaticPaths() {
   const METRICS = ['income','sales','property','fuel','excise','context'];
   const states = new Set();
@@ -18,6 +20,13 @@ export async function getStaticPaths() {
 
 const { code } = Astro.params;
 const s = (code || 'CA').toUpperCase();
+const stateJsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: `Taxes in ${s}, 2025  -  T1`,
+  description: `Transparent estimate of ${s} state & local taxes with optional federal layer.`,
+  url: `/state/${s}`,
+}).replace(/</g, '\\u003c');
 ---
 
 <html lang="en">
@@ -28,20 +37,10 @@ const s = (code || 'CA').toUpperCase();
     <meta property="og:title" content={`Taxes in ${s}, 2025  -  T1`} />
     <meta property="og:description" content={`Transparent estimate of ${s} state & local taxes with optional federal layer.`} />
     <link rel="canonical" href={`/state/${s}`} />
-    <script type="application/ld+json">{JSON.stringify({
-      "@context":"https://schema.org",
-      "@type":"WebPage",
-      "name":`Taxes in ${s}, 2025  -  T1`,
-      "description":`Transparent estimate of ${s} state & local taxes with optional federal layer.`,
-      "url":`/state/${s}`
-    })}</script>
+    <script type="application/ld+json" set:html={stateJsonLd}></script>
   </head>
   <body>
-    <script type="module">
-      if (!window.__t1_pack) {
-        window.__t1_pack = ${packLiteral};
-      }
-    </script>
+    <script type="module" set:html={seedPackScript}></script>
     <main class="container grid grid--sidebar">
       <section class="panel stack">
         <a href="/" class="badge" aria-label="Back to home">Home</a>

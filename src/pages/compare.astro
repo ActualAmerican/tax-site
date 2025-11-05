@@ -6,7 +6,9 @@ import Modal from '../components/Modal.astro';
 import Assumptions from '../components/Assumptions.astro';
 import pack from '../../data/packs/2025.1.0.json';
 
-const packLiteral = JSON.stringify(pack).replace(/</g, '\\u003c');
+const packSerialized = JSON.stringify(pack).replace(/</g, '\\u003c');
+const packInline = `JSON.parse(decodeURIComponent('${encodeURIComponent(packSerialized)}'))`;
+const seedPackScript = `(function(){try{const pack=${packInline};if(!window.__t1_pack)window.__t1_pack=pack;if(!window.__T1_PACK__)window.__T1_PACK__=pack;}catch(err){console.warn('seedPackScript failed',err);}})();`;
 
 const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const qp = new URL(Astro.request.url).searchParams;
@@ -22,11 +24,7 @@ const rightDefault = (qp.get('b') || 'TX').toUpperCase();
     <meta name="description" content="Compare state tax burdens side-by-side with totals, effective rates, and category differences." />
   </head>
   <body>
-    <script type="module">
-      if (!window.__t1_pack) {
-        window.__t1_pack = ${packLiteral};
-      }
-    </script>
+    <script type="module" set:html={seedPackScript}></script>
     <main class="container stack" style="gap:1.25rem">
       <section class="panel stack" style="gap:.75rem">
         <h1 class="heading--tight">Compare states</h1>

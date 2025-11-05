@@ -10,12 +10,14 @@ const contextMap = Object.fromEntries(
     },
   ]),
 );
+const contextJson = JSON.stringify(contextMap).replace(/</g, '\\u003c');
+const contextAttr = encodeURIComponent(contextJson);
 const initial = initialState ? contextMap[initialState] : null;
 const fmtCurrency = (val) => (typeof val === 'number' ? `$${val.toLocaleString()}` : '--');
 const fmtNumber = (val, suffix = '') => (typeof val === 'number' ? `${val}${suffix}` : '--');
 ---
 
-<div class="grid" data-component="context-cards">
+<div class="grid" data-component="context-cards" data-context={contextAttr}>
   <div class="panel">
     <div class="label"><strong>Median Household Income</strong><span>ACS</span></div>
     <div class="big-number" data-field="income">{fmtCurrency(initial?.income)}</div>
@@ -56,7 +58,14 @@ const fmtNumber = (val, suffix = '') => (typeof val === 'number' ? `${val}${suff
     return null;
   };
 
-  const CONTEXT = ${JSON.stringify(contextMap)};
+  let CONTEXT = {};
+  try {
+    const encoded = root.getAttribute('data-context');
+    CONTEXT = encoded ? JSON.parse(decodeURIComponent(encoded)) : {};
+  } catch (err) {
+    try { console.warn('ContextCards: failed to read context map', err); } catch (_) {}
+    CONTEXT = {};
+  }
 
   const incomeEl = root.querySelector('[data-field="income"]');
   const rppEl = root.querySelector('[data-field="rpp"]');
@@ -75,4 +84,3 @@ const fmtNumber = (val, suffix = '') => (typeof val === 'number' ? `${val}${suff
   });
 })();
 </script>
-

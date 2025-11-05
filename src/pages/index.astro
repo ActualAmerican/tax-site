@@ -10,7 +10,31 @@ import pack from '../../data/packs/2025.1.0.json';
 import Modal from '../components/Modal.astro';
 import TaxDeadlinesBanner from '../components/TaxDeadlinesBanner.astro';
 
-const packLiteral = JSON.stringify(pack).replace(/</g, '\\u003c');
+const packSerialized = JSON.stringify(pack).replace(/</g, '\\u003c');
+const packInline = `JSON.parse(decodeURIComponent('${encodeURIComponent(packSerialized)}'))`;
+const seedPackScript = `(function(){try{const pack=${packInline};if(!window.__t1_pack)window.__t1_pack=pack;if(!window.__T1_PACK__)window.__T1_PACK__=pack;}catch(err){console.warn('seedPackScript failed',err);}})();`;
+const faqJson = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'What taxes are included?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'State income, sales, property, fuel, and optional excise. Federal income, payroll, and LTCG are optional toggles.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Where does the data come from?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Official DoR/DOT/ACS/BEA/BLS/IRS sources compiled into a versioned pack with a provenance registry.',
+      },
+    },
+  ],
+}).replace(/</g, '\\u003c');
 ---
 
 <html lang="en">
@@ -22,23 +46,10 @@ const packLiteral = JSON.stringify(pack).replace(/</g, '\\u003c');
     <meta name="description" content="Interactive state tax burden estimator with optional federal layer." />
     <meta property="og:title" content="T1 - State + Federal Tax Burden Map" />
     <meta property="og:description" content="Interactive state & local tax burden estimator with optional federal layer." />
-    <script type="application/ld+json">
-    {JSON.stringify({
-      "@context":"https://schema.org",
-      "@type":"FAQPage",
-      "mainEntity":[
-        {"@type":"Question","name":"What taxes are included?","acceptedAnswer":{"@type":"Answer","text":"State income, sales, property, fuel, and optional excise. Federal income, payroll, and LTCG are optional toggles."}},
-        {"@type":"Question","name":"Where does the data come from?","acceptedAnswer":{"@type":"Answer","text":"Official DoR/DOT/ACS/BEA/BLS/IRS sources compiled into a versioned pack with a provenance registry."}}
-      ]
-    })}
-    </script>
+    <script type="application/ld+json" set:html={faqJson}></script>
   </head>
   <body>
-    <script type="module">
-      if (!window.__t1_pack) {
-        window.__t1_pack = ${packLiteral};
-      }
-    </script>
+    <script type="module" set:html={seedPackScript}></script>
     <main class="container stack">
       <header class="page-header stack">
         <div class="page-header__title">
@@ -72,6 +83,16 @@ const packLiteral = JSON.stringify(pack).replace(/</g, '\\u003c');
         document.title = 'T1 - State + Federal Tax Burden Map';
       } catch {}
     </script>
+    <!-- Inject the current data pack for all client scripts -->
+<script id="t1-pack" type="application/json" set:html={packSerialized}></script>
+<script type="module">
+  try {
+    if (!window.__T1_PACK__ && window.__t1_pack) {
+      window.__T1_PACK__ = window.__t1_pack;
+    }
+  } catch (e) {
+    console.warn('t1-pack inject failed', e);
+  }
+</script>
   </body>
 </html>
-
