@@ -91,13 +91,17 @@ const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
     setPlaceholderRow('Select a state to view its breakdown.');
   }
   let currentState = root.getAttribute('data-state') || '';
+  const initialCodeAttr = currentState;
   if (currentState) {
     setLoadingRow();
   } else {
     setEmptyRow();
   }
 
-  const scopeFlags = { local: false, state: true, federal: true };
+  const initialScopes = slot === 'solo'
+    ? { local: false, state: false, federal: false }
+    : { local: false, state: true, federal: true };
+  const scopeFlags = { ...initialScopes };
   function applyToolbarState() {
     const active = Boolean(currentState);
     if (stateLabel) stateLabel.textContent = active ? currentState : '--';
@@ -167,7 +171,10 @@ const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
     fuel:        'var(--t1-fuel)',
     fed_income:  'var(--t1-fed-income)',
     payroll:     'var(--t1-payroll)',
-    ltcg:        'var(--t1-ltcg)'
+    ltcg:        'var(--t1-ltcg)',
+    local_sales:    'var(--t1-local-sales)',
+    local_property: 'var(--t1-local-property)',
+    local_services: 'var(--t1-local-service)'
   };
   function colorForKey(k){ return COLOR[k] || 'var(--accent)'; }
 
@@ -182,8 +189,13 @@ const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
     spendingShare: 0.60,
     taxableShare: 0.55,
     includeFederal: true,
-    ltcg: 0
+    ltcg: 0,
+    scopes: { ...initialScopes },
+    locality: {}
   };
+  scopeFlags.local = latestInputs.scopes.local;
+  scopeFlags.state = latestInputs.scopes.state;
+  scopeFlags.federal = latestInputs.scopes.federal;
 
   // Ignore stale async renders
   let _seq = 0;
@@ -333,10 +345,16 @@ async function loadPack() {
   const fmt = (v) => '$' + (Number(v || 0)).toLocaleString();
   function pctOf(part, total){ return ((part / Math.max(1,total)) * 100).toFixed(0) + '%'; }
 
-  function renderBreakdownRows(stateRows, federalRows, totals) {
+function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
     const tbody = root.querySelector('tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
+
+    const safeTotals = {
+      local: totals && totals.local ? totals.local : { amount: '--', pct: '--' },
+      state: totals && totals.state ? totals.state : { amount: '--', pct: '--' },
+      federal: totals && totals.federal ? totals.federal : { amount: '--', pct: '--' }
+    };
 
     const addGroupHeader = (label) => {
       const tr = document.createElement('tr');
@@ -369,15 +387,20 @@ async function loadPack() {
       tbody.appendChild(tr);
     };
 
+    if (localRows.length) {
+      addGroupHeader('Local taxes');
+      localRows.forEach(addRow);
+      addSubtotal('Local subtotal', safeTotals.local.amount, safeTotals.local.pct);
+    }
     if (stateRows.length) {
       addGroupHeader('State taxes');
       stateRows.forEach(addRow);
-      addSubtotal('State subtotal', totals.state.amount, totals.state.pct);
+      addSubtotal('State subtotal', safeTotals.state.amount, safeTotals.state.pct);
     }
     if (federalRows.length) {
       addGroupHeader('Federal taxes');
       federalRows.forEach(addRow);
-      addSubtotal('Federal subtotal', totals.federal.amount, totals.federal.pct);
+      addSubtotal('Federal subtotal', safeTotals.federal.amount, safeTotals.federal.pct);
     }
   }
 
@@ -464,6 +487,47 @@ async function loadPack() {
     const pack = await loadPack();
     if (!pack) { setLoadingRow(); return; }
     if (mySeq !== _seq) return; // stale compute, abort
+
+    // ----- LOCAL CATEGORIES -----
+    const rawLocalNumeric = [];
+    if (scopeFlags.local) {
+      let localSalesMissing = false;
+      let localSalesValue = null;
+      let localSalesTitle = undefined;
+      if (pack && pack.sales) {
+        const salesRow = findRow(pack.sales, code);
+        if (!salesRow || isStub(salesRow, 'sales')) {
+          localSalesMissing = true;
+        } else if (typeof salesRow.avg_local_rate === 'number') {
+          const spendingShare = Number(latestInputs.spendingShare) || 0.6;
+          const rate = Math.max(0, salesRow.avg_local_rate);
+          localSalesValue = Math.round(inc * spendingShare * rate);
+          const annotations = [];
+          if (latestInputs.locality && latestInputs.locality.countyName) {
+            annotations.push(`County: ${latestInputs.locality.countyName}`);
+          }
+          if (latestInputs.locality && latestInputs.locality.fipsCounty) {
+            annotations.push(`FIPS ${latestInputs.locality.fipsCounty}`);
+          }
+          if (rate > 0) {
+            annotations.push(`Avg. local rate ${(rate * 100).toFixed(1)}%`);
+          } else {
+            annotations.push('Avg. local rate 0%');
+          }
+          localSalesTitle = annotations.join(' • ');
+        } else {
+          localSalesMissing = true;
+        }
+      } else {
+        localSalesMissing = true;
+      }
+      rawLocalNumeric.push({
+        key: 'local_sales',
+        label: 'Local sales add-on',
+        value: localSalesMissing ? null : localSalesValue,
+        title: localSalesMissing ? 'Local rate data pending' : localSalesTitle
+      });
+    }
 
     // ----- STATE CATEGORIES -----
     let stIncome = 0, stIncomeMissing = false;
@@ -554,10 +618,12 @@ async function loadPack() {
       if (fedLTCG > 0) rawFederalNumeric.push({ key:'ltcg', label:'LTCG', value: fedLTCG });
     }
 
+    const localNumeric = scopeFlags.local ? rawLocalNumeric : [];
     const stateNumeric = scopeFlags.state ? rawStateNumeric : [];
     const federalNumeric = includeFederal ? rawFederalNumeric : [];
 
-    const total = [...stateNumeric, ...federalNumeric].reduce((a, r) => a + (r.value ?? 0), 0);
+    const total = [...localNumeric, ...stateNumeric, ...federalNumeric].reduce((a, r) => a + (r.value ?? 0), 0);
+    const localSum = localNumeric.reduce((a, r) => a + (r.value ?? 0), 0);
     const stateSum = stateNumeric.reduce((a, r) => a + (r.value ?? 0), 0);
     const fedSum   = federalNumeric.reduce((a, r) => a + (r.value ?? 0), 0);
 
@@ -568,10 +634,11 @@ async function loadPack() {
       pct:    r.value == null ? '—' : pctOf(r.value,total),
       title:  r.title
     }));
+    const localDisplay   = toDisplay(localNumeric);
     const stateDisplay   = toDisplay(stateNumeric);
     const federalDisplay = toDisplay(federalNumeric);
 
-    if (!stateDisplay.length && !federalDisplay.length) {
+    if (!localDisplay.length && !stateDisplay.length && !federalDisplay.length) {
       if (totEl) totEl.textContent = '--';
       if (effEl) effEl.textContent = '--';
       if (chipTotal) chipTotal.textContent = '--';
@@ -588,6 +655,7 @@ async function loadPack() {
         pct:    (typeof r.pct    === 'string' && r.pct.indexOf('\uFFFD')    >= 0) ? '0.0%' : r.pct,
       }));
     }
+    const localDisplayNorm   = normalizeDisplay(localDisplay);
     const stateDisplayNorm   = normalizeDisplay(stateDisplay);
     const federalDisplayNorm = normalizeDisplay(federalDisplay);
 
@@ -599,13 +667,18 @@ async function loadPack() {
     if (chipEff)   chipEff.textContent   = effEl ? effEl.textContent : effRateStr;
 
     renderBreakdownRows(
+      localDisplayNorm,
       stateDisplayNorm,
       federalDisplayNorm,
-      { state: { amount: fmt(stateSum), pct: pctOf(stateSum,total) }, federal: { amount: fmt(fedSum), pct: pctOf(fedSum,total) } }
+      {
+        local: { amount: localDisplayNorm.length ? fmt(localSum) : '--', pct: localDisplayNorm.length ? pctOf(localSum,total) : '--' },
+        state: { amount: stateDisplayNorm.length ? fmt(stateSum) : '--', pct: stateDisplayNorm.length ? pctOf(stateSum,total) : '--' },
+        federal: { amount: federalDisplayNorm.length ? fmt(fedSum) : '--', pct: federalDisplayNorm.length ? pctOf(fedSum,total) : '--' }
+      }
     );
 
-    // Build stacked-bar segments (state + federal) with colors
-    const segments = [...stateNumeric, ...federalNumeric]
+    // Build stacked-bar segments (local + state + federal) with colors
+    const segments = [...localNumeric, ...stateNumeric, ...federalNumeric]
       .filter(r => (r.value ?? 0) > 0)
       .map(r => ({ key:r.key, label:r.label, value:r.value, color: colorForKey(r.key) }));
     _lastSegments = segments; // store for "Open chart"
@@ -619,15 +692,18 @@ async function loadPack() {
         filingStatus: latestInputs.filingStatus,
         income: inc,
         includeFederal: !!latestInputs.includeFederal,
-        ltcg: latestInputs.ltcg
+        ltcg: latestInputs.ltcg,
+        locality: latestInputs.locality || null
       },
       totals: {
+        localSubtotal: localSum,
         stateSubtotal: stateSum,
         federalSubtotal: fedSum,
         total,
         effectiveRate: total / Math.max(1, inc)
       },
       rows: {
+        local: localNumeric,
         state: stateNumeric,
         federal: federalNumeric
       },
@@ -701,6 +777,15 @@ async function loadPack() {
     latestInputs.taxableShare   = d.taxableShare   ?? latestInputs.taxableShare;
     latestInputs.includeFederal = (typeof d.includeFederal === 'boolean') ? d.includeFederal : latestInputs.includeFederal;
     latestInputs.ltcg           = d.ltcg           ?? latestInputs.ltcg;
+    if (d.scopes) {
+      latestInputs.scopes = { ...latestInputs.scopes, ...d.scopes };
+      scopeFlags.local = !!latestInputs.scopes.local;
+      scopeFlags.state = !!latestInputs.scopes.state;
+      scopeFlags.federal = !!latestInputs.scopes.federal;
+    }
+    if (d.locality) {
+      latestInputs.locality = { ...latestInputs.locality, ...d.locality };
+    }
 
     if (!currentState) {
       setEmptyRow();
@@ -750,7 +835,7 @@ async function loadPack() {
     if (typeof detail.state === 'boolean') scopeFlags.state = detail.state;
     if (typeof detail.federal === 'boolean') scopeFlags.federal = detail.federal;
     if (!currentState) {
-      if (!scopeFlags.state && !scopeFlags.federal) {
+      if (!scopeFlags.local && !scopeFlags.state && !scopeFlags.federal) {
         if (chipTotal) chipTotal.textContent = '--';
         if (chipEff) chipEff.textContent = '--';
         setPlaceholderRow('Enable a scope to view totals.');
@@ -760,13 +845,66 @@ async function loadPack() {
     requestAnimationFrame(() => computeDemoBreakdown(currentState));
   });
 
+  let copyToastTimer = 0;
+  function showCopyToast(message, tone = 'info') {
+    if (typeof document === 'undefined') return;
+    let toast = document.getElementById('bd-copy-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'bd-copy-toast';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      toast.style.position = 'fixed';
+      toast.style.bottom = '1.5rem';
+      toast.style.left = '50%';
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.padding = '0.5rem 0.75rem';
+      toast.style.borderRadius = '999px';
+      toast.style.fontSize = '0.85rem';
+      toast.style.zIndex = '4000';
+      toast.style.pointerEvents = 'none';
+      toast.style.color = '#fff';
+      toast.style.boxShadow = '0 12px 28px rgba(0,0,0,0.22)';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.background = tone === 'error' ? 'rgba(176, 46, 59, 0.92)' : 'rgba(26, 30, 40, 0.92)';
+    toast.style.opacity = '1';
+    toast.style.transition = 'opacity 180ms ease';
+    if (copyToastTimer) window.clearTimeout(copyToastTimer);
+    copyToastTimer = window.setTimeout(() => {
+      if (!toast) return;
+      toast.style.opacity = '0';
+      window.setTimeout(() => {
+        if (toast && toast.parentElement) toast.parentElement.removeChild(toast);
+      }, 220);
+      copyToastTimer = 0;
+    }, tone === 'error' ? 2000 : 1500);
+  }
+
   // Copy link (local toolbar)
   copyBtn?.addEventListener('click', async () => {
+    let shareURL = location.href;
     try {
-      await navigator.clipboard.writeText(location.href);
+      const share = typeof window !== 'undefined' ? window.__T1_SHARE__ : null;
+      if (share && typeof share.encode === 'function') {
+        const encoded = share.encode();
+        if (encoded && typeof encoded.toString === 'function') {
+          shareURL = encoded.toString();
+        }
+      }
+    } catch (err) {
+      try { console.warn('Breakdown: share encode failed', err); } catch (_e) {}
+    }
+    try {
+      await navigator.clipboard.writeText(shareURL);
       copyBtn.textContent = 'Copied!';
       setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1200);
-    } catch {}
+      showCopyToast('Link copied');
+    } catch (err) {
+      try { console.warn('Breakdown: clipboard write failed', err); } catch (_e) {}
+      showCopyToast('Copy failed', 'error');
+    }
   });
 
   // Open chart (pie modal)
@@ -781,9 +919,9 @@ async function loadPack() {
     const url  = new URL(location.href);
     const fips = url.searchParams.get('fips');
     const st   = url.searchParams.get('state');
-    updateState(st || fips || initialCode || null);
+    updateState(st || fips || initialCodeAttr || null);
   } catch {
-    updateState(initialCode || null);
+    updateState(initialCodeAttr || null);
   }
 })();
 </script>

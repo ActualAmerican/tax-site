@@ -19,7 +19,7 @@
       Parking &amp; admissions
     </button>
   </div>
-  <p class="muted-note">Toggles are visual for now; local tax math arrives in the next pass.</p>
+  <p class="muted-note" data-local-note>Select a state to load county-specific options. Local toggles are available while we wire the math.</p>
 </div>
 
 <script type="module">
@@ -28,6 +28,7 @@
     if (!script) return;
     const root = script.previousElementSibling;
     if (!root || !root.matches('.inputs-local')) return;
+    const note = root.querySelector('[data-local-note]');
 
     root.addEventListener('click', (event) => {
       const btn = event.target.closest('button[data-cat]');
@@ -36,6 +37,18 @@
       btn.setAttribute('aria-pressed', next ? 'true' : 'false');
       btn.classList.toggle('is-active', next);
     });
+
+    function updateNote(code) {
+      if (!note) return;
+      note.textContent = code
+        ? `County list ready for ${code}. Toggle local categories below.`
+        : 'Select a state to load county-specific options. Local toggles are available while we wire the math.';
+    }
+
+    updateNote(null);
+    window.addEventListener('t1:state', (event) => {
+      const detail = event.detail || {};
+      updateNote(detail.code || null);
+    });
   })();
 </script>
-

@@ -89,6 +89,15 @@
       ],
     };
 
+    const STATE_FIPS_MAP = {
+      '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL','13':'GA',
+      '15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD','25':'MA',
+      '26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE','32':'NV','33':'NH','34':'NJ','35':'NM','36':'NY',
+      '37':'NC','38':'ND','39':'OH','40':'OK','41':'OR','42':'PA','44':'RI','45':'SC','46':'SD','47':'TN','48':'TX',
+      '49':'UT','50':'VT','51':'VA','53':'WA','54':'WV','55':'WI','56':'WY','72':'PR'
+    };
+    const STATE_CODE_TO_FIPS = Object.fromEntries(Object.entries(STATE_FIPS_MAP).map(([f, code]) => [code, f]));
+
     let currentState = null;
 
     const countySelect = root.querySelector('[data-field="county-select"]');
@@ -100,10 +109,20 @@
       const zip = (root.querySelector('[data-field="zip"]')?.value || '').trim();
       const city = (root.querySelector('[data-field="city"]')?.value || '').trim();
       const county = (countyInput?.value || '').trim();
+      let derivedState = currentState;
+      if (!derivedState && county.length >= 5) {
+        derivedState = STATE_FIPS_MAP[county.slice(0, 2)] || null;
+      }
+      if (derivedState && derivedState !== currentState) {
+        currentState = derivedState;
+        renderCountyOptions(currentState, county || undefined);
+      }
       const countyName =
-        currentState && county
-          ? (COUNTY_DIRECTORY[currentState] || []).find((c) => c.fips === county)?.name
+        derivedState && county
+          ? (COUNTY_DIRECTORY[derivedState] || []).find((c) => c.fips === county)?.name
           : undefined;
+
+      const stateFips = derivedState ? STATE_CODE_TO_FIPS[derivedState] : county ? county.slice(0, 2) : undefined;
 
       window.dispatchEvent(
         new CustomEvent('t1:locality-changed', {
@@ -112,7 +131,9 @@
             city: city || undefined,
             fipsCounty: county || undefined,
             countyName: countyName || undefined,
-            state: currentState || undefined,
+            state: derivedState || undefined,
+            stateFips: stateFips || undefined,
+            source: 'picker',
           },
         }),
       );
@@ -132,7 +153,7 @@
       });
     }
 
-    function renderCountyOptions(code) {
+    function renderCountyOptions(code, preferredFips) {
       if (!countySelect) return;
       const list = (code && COUNTY_DIRECTORY[code]) || [];
       countySelect.innerHTML = '';
@@ -159,6 +180,9 @@
         countySelect.appendChild(opt);
       });
       countySelect.removeAttribute('disabled');
+      if (preferredFips) {
+        countySelect.value = preferredFips;
+      }
     }
 
     if (countySelect) {
@@ -179,24 +203,36 @@
         } else if (detail.code) {
           code = String(detail.code).toUpperCase();
         } else if (detail.fips) {
-          const map = {
-            '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL','13':'GA',
-            '15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD','25':'MA',
-            '26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE','32':'NV','33':'NH','34':'NJ','35':'NM','36':'NY',
-            '37':'NC','38':'ND','39':'OH','40':'OK','41':'OR','42':'PA','44':'RI','45':'SC','46':'SD','47':'TN','48':'TX',
-            '49':'UT','50':'VT','51':'VA','53':'WA','54':'WV','55':'WI','56':'WY','72':'PR'
-          };
-          code = map[String(detail.fips)] || null;
+          const dig = String(detail.fips).slice(0, 2);
+          code = STATE_FIPS_MAP[dig] || null;
         }
       }
       currentState = code;
-      renderCountyOptions(code);
+      renderCountyOptions(code, countySelect?.value);
       if (!code) {
         if (countyInput) countyInput.value = '';
         if (zipInput) zipInput.value = '';
         if (cityInput) cityInput.value = '';
       }
       emit();
+    });
+
+    window.addEventListener('t1:locality-changed', (event) => {
+      const detail = event.detail || {};
+      if (detail && detail.source === 'picker') return;
+      const countyFips = detail?.fipsCounty || detail?.countyFips || detail?.fips || '';
+      let stateCode = detail?.state || null;
+      if (!stateCode && countyFips) {
+        stateCode = STATE_FIPS_MAP[String(countyFips).slice(0, 2)] || null;
+      }
+      if (stateCode && stateCode !== currentState) {
+        currentState = stateCode;
+        renderCountyOptions(stateCode, countyFips || undefined);
+      }
+      if (countyInput && typeof countyFips === 'string') countyInput.value = countyFips;
+      if (countySelect && countyFips) countySelect.value = countyFips;
+      if (zipInput && typeof detail.zip === 'string') zipInput.value = detail.zip;
+      if (cityInput && typeof detail.city === 'string') cityInput.value = detail.city;
     });
   })();
 </script>

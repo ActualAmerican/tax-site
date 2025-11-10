@@ -1,0 +1,89 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "fips": "48453",
+        "state": "TX",
+        "name": "Travis County",
+        "revision": "2024"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-98.050, 30.000],
+            [-97.300, 30.000],
+            [-97.300, 30.700],
+            [-98.050, 30.700],
+            [-98.050, 30.000]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "fips": "48201",
+        "state": "TX",
+        "name": "Harris County",
+        "revision": "2024"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-95.800, 29.500],
+            [-94.900, 29.500],
+            [-94.900, 30.200],
+            [-95.800, 30.200],
+            [-95.800, 29.500]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "fips": "48113",
+        "state": "TX",
+        "name": "Dallas County",
+        "revision": "2024"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-97.100, 32.550],
+            [-96.400, 32.550],
+            [-96.400, 33.100],
+            [-97.100, 33.100],
+            [-97.100, 32.550]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "fips": "06037",
+        "state": "CA",
+        "name": "Los Angeles County",
+        "revision": "2024"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-118.900, 33.650],
+            [-117.500, 33.650],
+            [-117.500, 34.500],
+            [-118.900, 34.500],
+            [-118.900, 33.650]
+          ]
+        ]
+      }
+    }
+  ]
+}

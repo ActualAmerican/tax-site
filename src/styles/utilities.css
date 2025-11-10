@@ -589,6 +589,46 @@ button {
   stroke-linecap: round;
 }
 
+[data-t1-map] .county {
+  fill: rgba(34, 211, 238, 0.15);
+  stroke: rgba(34, 211, 238, 0.6);
+  stroke-width: 0.7;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  paint-order: stroke fill markers;
+  opacity: 0.0;
+  pointer-events: none;
+  display: none;
+  transition: opacity 0.18s ease;
+}
+
+[data-t1-map] .county[data-visible='1'] {
+  display: block;
+  opacity: 0.55;
+  pointer-events: auto;
+}
+
+[data-t1-map] .county:hover,
+[data-t1-map] .county:focus {
+  opacity: 0.85;
+  outline: none;
+}
+
+[data-t1-map] .county--selected {
+  opacity: 0.95;
+  stroke: var(--text);
+  stroke-width: 1.2;
+  fill: rgba(14, 165, 233, 0.25);
+}
+
+[data-t1-map][data-local-active='1'] .county {
+  pointer-events: auto;
+}
+
+[data-t1-map][data-local-active='0'] .county--selected {
+  opacity: 0;
+}
+
 /* Yes/No toggle group */
 .toggle-group {
   display: inline-flex;

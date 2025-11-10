@@ -45,7 +45,15 @@
         "checked_at": "2025-10-05"
       }
     ],
-    "hash": "sha256:seedpack-placeholder"
+    "hash": "sha256:seedpack-placeholder",
+    "layers": {
+      "counties": {
+        "href": "/local/counties-sample.geojson",
+        "type": "geojson",
+        "revision": "2024-Q4",
+        "notes": "Sample county overlay for interactive prototype"
+      }
+    }
   },
   "income": [
     {

@@ -1,4 +1,4 @@
-﻿---
+---
 import ScopeSelector from './ScopeSelector.astro';
 import LocalityPicker from './LocalityPicker.astro';
 import InputsLocal from './InputsLocal.astro';
@@ -20,7 +20,7 @@ import InputsFederal from './InputsFederal.astro';
     <InputsLocal />
   </section>
 
-  <section class="scope-card scope-card--state" data-scope-card="state" aria-hidden="false">
+  <section class="scope-card scope-card--state" data-scope-card="state" hidden aria-hidden="true">
     <header class="scope-card__header">
       <div>
         <span class="scope-card__badge scope-card__badge--state">State</span>
@@ -31,7 +31,7 @@ import InputsFederal from './InputsFederal.astro';
     <InputsState />
   </section>
 
-  <section class="scope-card scope-card--federal" data-scope-card="federal" aria-hidden="false">
+  <section class="scope-card scope-card--federal" data-scope-card="federal" hidden aria-hidden="true">
     <header class="scope-card__header">
       <div>
         <span class="scope-card__badge scope-card__badge--federal">Federal</span>
@@ -48,45 +48,90 @@ import InputsFederal from './InputsFederal.astro';
 (function () {
   const $ = (id) => document.getElementById(id);
 
-  const scopeState = { local: false, state: true, federal: true };
-  let lastFederalPreference = true;
+  const win = typeof window !== 'undefined' ? window : undefined;
+  const shareCtrl = win && typeof win.__T1_SHARE__ === 'object' ? win.__T1_SHARE__ : null;
+  const shareUtils = win && win.__T1_SHARE_UTILS__ ? win.__T1_SHARE_UTILS__ : null;
+  const PACK_VERSION = (() => {
+    if (!win) return null;
+    if (shareCtrl && typeof shareCtrl.version === 'string' && shareCtrl.version) return shareCtrl.version;
+    if (typeof win.__T1_PACK_VERSION__ === 'string' && win.__T1_PACK_VERSION__) return win.__T1_PACK_VERSION__;
+    try {
+      const seeded = win.__T1_PACK__ || win.__t1_pack;
+      const ver = seeded?.registry?.pack_version;
+      return typeof ver === 'string' && ver.trim() ? ver : null;
+    } catch {
+      return null;
+    }
+  })();
 
-  function currentURL() { try { return new URL(window.location.href); } catch { return null; } }
-  function readInputsFromURL(u) {
-    const gp = (k) => u.searchParams.get(k);
-    const pnum = (v) => Number(String(v || '').replace(/[^0-9.-]/g, '')) || 0;
-    return {
-      filingStatus: gp('fs') || 'single',
-      income: gp('inc') ? pnum(gp('inc')) : 60000,
-      homeowner: (gp('ho') ?? '1') === '1',
-      homeValue: gp('hv') ? pnum(gp('hv')) : 300000,
-      miles: gp('mi') ? +gp('mi') : 12000,
-      mpg: gp('mpg') ? +gp('mpg') : 28,
-      spendingShare: gp('ss') ? +gp('ss') : 0.6,
-      taxableShare: gp('ts') ? +gp('ts') : 0.55,
-      cigPacksPerWeek: gp('cig') ? +gp('cig') : 0,
-      alcoholUnitsPerWeek: gp('alc') ? +gp('alc') : 0,
-      includeFederal: (gp('fed') ?? '1') === '1',
-      ltcg: gp('ltcg') ? pnum(gp('ltcg')) : 0,
-    };
+  const shareDefaults = () => ({
+    state: { fips: null, code: null },
+    inputs: {
+      filingStatus: 'single',
+      income: 60000,
+      homeowner: true,
+      homeValue: 300000,
+      miles: 12000,
+      mpg: 28,
+      spendingShare: 0.6,
+      taxableShare: 0.55,
+      cigPacksPerWeek: 0,
+      alcoholUnitsPerWeek: 0,
+      includeFederal: true,
+      ltcg: 0,
+    },
+    scope: { local: false, state: true, federal: true },
+    local: { zip: null, countyFips: null, toggles: 0 },
+    version: PACK_VERSION || null,
+  });
+
+  function resolveShareModel() {
+    try {
+      if (shareCtrl && typeof shareCtrl.getModel === 'function') {
+        const model = shareCtrl.getModel();
+        if (model) return model;
+      }
+    } catch (_err) {}
+    if (win && win.__T1_SHARE_MODEL__) {
+      try {
+        if (shareUtils && typeof shareUtils.mergeModel === 'function') {
+          return shareUtils.mergeModel(win.__T1_SHARE_MODEL__, {}, { packVersion: PACK_VERSION || undefined });
+        }
+        return { ...win.__T1_SHARE_MODEL__ };
+      } catch (_err) {
+        return win.__T1_SHARE_MODEL__;
+      }
+    }
+    if (shareUtils && typeof shareUtils.createDefaultModel === 'function') {
+      return shareUtils.createDefaultModel({ packVersion: PACK_VERSION || undefined });
+    }
+    return shareDefaults();
   }
-  function writeInputsToURL(u, i) {
-    const sp = u.searchParams;
-    const set = (k, v) => { if (v == null || v === '' || v === 0) sp.delete(k); else sp.set(k, String(v)); };
-    set('fs', i.filingStatus);
-    set('inc', i.income | 0);
-    set('ho', i.homeowner ? '1' : '0');
-    set('hv', i.homeValue | 0);
-    set('mi', i.miles);
-    set('mpg', i.mpg);
-    set('ss', i.spendingShare);
-    set('ts', i.taxableShare);
-    set('cig', i.cigPacksPerWeek || null);
-    set('alc', i.alcoholUnitsPerWeek || null);
-    set('fed', i.includeFederal ? '1' : '0');
-    set('ltcg', i.ltcg || null);
-    return u;
+
+  let shareModel = resolveShareModel();
+  if (win) win.__T1_SHARE_MODEL__ = shareModel;
+
+  const scopeState = { ...shareModel.scope };
+  let lastFederalPreference = shareModel.inputs.includeFederal;
+  const selectorRoot = document.querySelector('[data-component="scope-selector"]');
+  const scopeButtons = selectorRoot ? Array.from(selectorRoot.querySelectorAll('button[data-scope]')) : [];
+  const localButton = selectorRoot ? selectorRoot.querySelector('button[data-scope="local"]') : null;
+  let hasState = !!(shareModel.state && shareModel.state.fips);
+  let userInteractedLocal = false;
+
+  if (selectorRoot) {
+    selectorRoot.setAttribute('data-local', scopeState.local ? '1' : '0');
+    selectorRoot.setAttribute('data-state', scopeState.state ? '1' : '0');
+    selectorRoot.setAttribute('data-federal', scopeState.federal ? '1' : '0');
   }
+
+  const FIPS_TO_CODE = {
+    '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL','13':'GA',
+    '15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD','25':'MA',
+    '26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE','32':'NV','33':'NH','34':'NJ','35':'NM','36':'NY',
+    '37':'NC','38':'ND','39':'OH','40':'OK','41':'OR','42':'PA','44':'RI','45':'SC','46':'SD','47':'TN','48':'TX',
+    '49':'UT','50':'VT','51':'VA','53':'WA','54':'WV','55':'WI','56':'WY','72':'PR'
+  };
 
   function parseNum(v) {
     if (v == null) return 0;
@@ -94,6 +139,71 @@ import InputsFederal from './InputsFederal.astro';
   }
   const nf = new Intl.NumberFormat('en-US');
   function fmtNum(n) { return nf.format(n | 0); }
+
+  let fallbackTimer = 0;
+  let fallbackLastURL = typeof location !== 'undefined' ? location.href : '';
+
+  function scheduleFallbackURLUpdate(delay = 150) {
+    if (!win) return;
+    if (fallbackTimer) win.clearTimeout(fallbackTimer);
+    fallbackTimer = win.setTimeout(() => {
+      try {
+        const encoded =
+          shareUtils && typeof shareUtils.encode === 'function'
+            ? shareUtils
+                .encode(shareModel, {
+                  baseUrl: location.href,
+                  packVersion: PACK_VERSION || undefined,
+                })
+                .toString()
+            : null;
+        if (encoded && encoded !== fallbackLastURL) {
+          history.replaceState(history.state ?? {}, '', encoded);
+          fallbackLastURL = encoded;
+        }
+      } catch (err) {
+        try { console.warn('inputs: fallback permalink update failed', err); } catch (_e) {}
+      }
+      fallbackTimer = 0;
+    }, delay);
+  }
+
+  function updateShareModel(patch = {}, opts = {}) {
+    try {
+      if (shareCtrl && typeof shareCtrl.setModel === 'function') {
+        shareModel = shareCtrl.setModel(patch);
+        const delay = typeof opts.delay === 'number' ? opts.delay : 150;
+        if (opts.push) {
+          shareCtrl.scheduleURLUpdate?.({ push: true, state: opts.state, delay: 0 });
+        } else {
+          shareCtrl.scheduleURLUpdate?.({ delay });
+        }
+        return shareModel;
+      }
+    } catch (err) {
+      try { console.warn('inputs: share controller merge failed', err); } catch (_e) {}
+    }
+    if (shareUtils && typeof shareUtils.mergeModel === 'function') {
+      shareModel = shareUtils.mergeModel(shareModel, patch, { packVersion: PACK_VERSION || undefined });
+    } else {
+      const next = {
+        state: { ...(shareModel.state || {}) },
+        inputs: { ...(shareModel.inputs || {}) },
+        scope: { ...(shareModel.scope || {}) },
+        local: { ...(shareModel.local || {}) },
+        version: shareModel.version ?? null,
+      };
+      if (patch.state) next.state = { ...next.state, ...patch.state };
+      if (patch.inputs) next.inputs = { ...next.inputs, ...patch.inputs };
+      if (patch.scope) next.scope = { ...next.scope, ...patch.scope };
+      if (patch.local) next.local = { ...next.local, ...patch.local };
+      if (patch.version !== undefined) next.version = patch.version;
+      shareModel = next;
+    }
+    if (win) win.__T1_SHARE_MODEL__ = shareModel;
+    scheduleFallbackURLUpdate(typeof opts.delay === 'number' ? opts.delay : 150);
+    return shareModel;
+  }
 
   function attachLiveFormatter(inputEl) {
     if (!inputEl) return;
@@ -143,30 +253,7 @@ import InputsFederal from './InputsFederal.astro';
     inputEl.addEventListener('blur', () => { running = false; });
   }
 
-  const init = (() => {
-    const u = currentURL();
-    const defaults = {
-      filingStatus: 'single',
-      income: 60000,
-      homeowner: true,
-      homeValue: 300000,
-      miles: 12000,
-      mpg: 28,
-      spendingShare: 0.6,
-      taxableShare: 0.55,
-      cigPacksPerWeek: 0,
-      alcoholUnitsPerWeek: 0,
-      includeFederal: true,
-      ltcg: 0,
-    };
-    if (!u) return defaults;
-    try {
-      const parsed = readInputsFromURL(u);
-      return { ...defaults, ...parsed };
-    } catch {
-      return defaults;
-    }
-  })();
+  const init = { ...shareModel.inputs };
 
   if ($('fs')) $('fs').value = init.filingStatus;
   if ($('inc')) $('inc').value = fmtNum(init.income);
@@ -187,17 +274,54 @@ import InputsFederal from './InputsFederal.astro';
   if (tsBadge) tsBadge.textContent = Math.round(init.taxableShare * 100) + '%';
 
   const state = { ...init };
+  state.scopes = { ...scopeState };
+  state.locality = {
+    zip: shareModel.local.zip || null,
+    fipsCounty: shareModel.local.countyFips || null,
+    countyFips: shareModel.local.countyFips || null,
+    state: shareModel.state.code || null,
+    stateFips: shareModel.state.fips || null,
+  };
   lastFederalPreference = state.includeFederal;
 
   const toggleControllers = new Map();
 
   function emit() {
-    const cu = currentURL();
-    if (!cu) return;
-    const u = writeInputsToURL(cu, state);
-    history.replaceState({}, '', u);
+    state.scopes = { ...scopeState };
+    const localityDetail = { ...(state.locality || {}) };
+    const patch = {
+      inputs: {
+        filingStatus: state.filingStatus,
+        income: state.income,
+        homeowner: state.homeowner,
+        homeValue: state.homeValue,
+        miles: state.miles,
+        mpg: state.mpg,
+        spendingShare: state.spendingShare,
+        taxableShare: state.taxableShare,
+        includeFederal: state.includeFederal,
+        ltcg: state.ltcg,
+        cigPacksPerWeek: state.cigPacksPerWeek,
+        alcoholUnitsPerWeek: state.alcoholUnitsPerWeek,
+      },
+      scope: { ...scopeState },
+      local: {
+        zip: localityDetail.zip ?? null,
+        countyFips: localityDetail.fipsCounty ?? localityDetail.countyFips ?? null,
+        toggles: shareModel.local?.toggles ?? 0,
+      },
+    };
+    shareModel = updateShareModel(patch);
     queueMicrotask(() => {
-      window.dispatchEvent(new CustomEvent('t1:inputs', { detail: { ...state } }));
+      window.dispatchEvent(
+        new CustomEvent('t1:inputs', {
+          detail: {
+            ...state,
+            scopes: { ...scopeState },
+            locality: localityDetail,
+          },
+        }),
+      );
     });
   }
 
@@ -292,6 +416,20 @@ import InputsFederal from './InputsFederal.astro';
     if ($('fed')) $('fed').value = active ? '1' : '0';
   });
 
+  function updateSelectorChips() {
+    if (!selectorRoot) return;
+    selectorRoot.setAttribute('data-local', scopeState.local ? '1' : '0');
+    selectorRoot.setAttribute('data-state', scopeState.state ? '1' : '0');
+    selectorRoot.setAttribute('data-federal', scopeState.federal ? '1' : '0');
+    scopeButtons.forEach((btn) => {
+      const scope = btn.getAttribute('data-scope');
+      if (!scope) return;
+      const active = !!scopeState[scope];
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      btn.classList.toggle('is-active', active);
+    });
+  }
+
   function applyScopeVisibility() {
     document.querySelectorAll('[data-scope-card]').forEach((card) => {
       const scope = card.getAttribute('data-scope-card');
@@ -307,35 +445,127 @@ import InputsFederal from './InputsFederal.astro';
     });
   }
 
+  function broadcastScope(origin = 'inputs') {
+    window.dispatchEvent(
+      new CustomEvent('t1:scope-changed', {
+        detail: { ...scopeState, __origin: origin },
+      }),
+    );
+  }
+
+  function handleFederalTransition(prev, next) {
+    if (prev === next) return;
+    if (!next) {
+      lastFederalPreference = state.includeFederal;
+      if (state.includeFederal) {
+        state.includeFederal = false;
+        toggleControllers.get('fed')?.activate('0', false);
+        if ($('fed')) $('fed').value = '0';
+      }
+    } else {
+      state.includeFederal = lastFederalPreference;
+      toggleControllers.get('fed')?.activate(state.includeFederal ? '1' : '0', false);
+      if ($('fed')) $('fed').value = state.includeFederal ? '1' : '0';
+    }
+  }
+
+  function setScope(scope, value, opts = {}) {
+    if (!(scope in scopeState)) return;
+    if (scopeState[scope] === value) return;
+    const prevFederal = scopeState.federal;
+    scopeState[scope] = value;
+    updateSelectorChips();
+    applyScopeVisibility();
+    state.scopes = { ...scopeState };
+    handleFederalTransition(prevFederal, scopeState.federal);
+    if (opts.broadcast !== false) broadcastScope('inputs');
+    if (opts.emit !== false) emit();
+  }
+
+  function updateLocalAvailability() {
+    if (!localButton) return;
+    localButton.removeAttribute('disabled');
+    localButton.removeAttribute('aria-disabled');
+  }
+
+  if (scopeButtons.length) {
+    scopeButtons.forEach((btn) => {
+      const scope = btn.getAttribute('data-scope');
+      if (!scope) return;
+      btn.addEventListener('click', () => {
+        if (btn.hasAttribute('disabled')) return;
+        const next = !scopeState[scope];
+        if (scope === 'local') userInteractedLocal = true;
+        setScope(scope, next);
+      });
+    });
+
+    const chipsContainer = selectorRoot?.querySelector('.scope-selector__chips');
+    if (chipsContainer) {
+      chipsContainer.addEventListener('keydown', (event) => {
+        const key = event.key;
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+        event.preventDefault();
+        const buttons = Array.from(chipsContainer.querySelectorAll('button[data-scope]'));
+        if (!buttons.length) return;
+        const focusedIndex = buttons.findIndex((btn) => btn === document.activeElement);
+        const activeIndex = focusedIndex >= 0 ? focusedIndex : buttons.findIndex((btn) => btn.classList.contains('is-active'));
+        let nextIndex = activeIndex >= 0 ? activeIndex : 0;
+        if (key === 'ArrowLeft') nextIndex = (nextIndex - 1 + buttons.length) % buttons.length;
+        if (key === 'ArrowRight') nextIndex = (nextIndex + 1) % buttons.length;
+        if (key === 'Home') nextIndex = 0;
+        if (key === 'End') nextIndex = buttons.length - 1;
+        const nextBtn = buttons[nextIndex];
+        if (nextBtn) nextBtn.focus();
+      });
+    }
+  }
+
+  updateSelectorChips();
+  applyScopeVisibility();
+  state.scopes = { ...scopeState };
+  updateLocalAvailability();
+  broadcastScope('inputs');
+
   window.addEventListener('t1:scope-changed', (event) => {
     const detail = event.detail || {};
+    if (detail.__origin === 'inputs') return;
     const prevFederal = scopeState.federal;
+    let changed = false;
     ['local', 'state', 'federal'].forEach((scope) => {
-      if (typeof detail[scope] === 'boolean') {
+      if (typeof detail[scope] === 'boolean' && scopeState[scope] !== detail[scope]) {
         scopeState[scope] = detail[scope];
+        changed = true;
       }
     });
+    if (!changed) return;
+    updateSelectorChips();
     applyScopeVisibility();
-
-    if (prevFederal !== scopeState.federal) {
-      if (!scopeState.federal) {
-        lastFederalPreference = state.includeFederal;
-        if (state.includeFederal) {
-          state.includeFederal = false;
-          toggleControllers.get('fed')?.activate('0', false);
-          if ($('fed')) $('fed').value = '0';
-          emit();
-        }
-      } else {
-        state.includeFederal = lastFederalPreference;
-        toggleControllers.get('fed')?.activate(state.includeFederal ? '1' : '0', false);
-        if ($('fed')) $('fed').value = state.includeFederal ? '1' : '0';
-        emit();
-      }
-    }
+    state.scopes = { ...scopeState };
+    handleFederalTransition(prevFederal, scopeState.federal);
+    updateLocalAvailability();
+    emit();
   });
 
-  applyScopeVisibility();
+  window.addEventListener('t1:state', (event) => {
+    const detail = event.detail || {};
+    let code = null;
+    if (detail && detail.code) {
+      code = String(detail.code).toUpperCase();
+    } else if (detail && detail.fips) {
+      const dig = String(detail.fips).padStart(2, '0').slice(0, 2);
+      code = FIPS_TO_CODE[dig] || null;
+    }
+    const prevHasState = hasState;
+    hasState = !!code;
+    updateLocalAvailability();
+    if (hasState && !prevHasState && !scopeState.local && !userInteractedLocal) {
+      setScope('local', true);
+    }
+    if (!hasState) {
+      userInteractedLocal = false;
+    }
+  });
 
   requestAnimationFrame(() => {
     incEl?.dispatchEvent(new Event('input', { bubbles: false }));
@@ -352,6 +582,20 @@ import InputsFederal from './InputsFederal.astro';
     }
   })();
   emit();
+
+  window.addEventListener('t1:locality-changed', (event) => {
+    const detail = event.detail || {};
+    state.locality = {
+      zip: detail.zip,
+      city: detail.city,
+      countyName: detail.countyName,
+      fipsCounty: detail.fipsCounty || detail.countyFips || detail.fips || null,
+      state: detail.state || null,
+      stateFips: detail.stateFips || null,
+      source: detail.source || null
+    };
+    emit();
+  });
 
   document.addEventListener('input', (ev) => {
     const el = ev.target;
@@ -371,3 +615,7 @@ import InputsFederal from './InputsFederal.astro';
   }, true);
 })();
 </script>
+
+
+
+

@@ -54,6 +54,7 @@ if (import.meta.env.SSR) {
       {statePaths.map(p => (
         <path d={p.d} data-fips={p.id} class="state" />
       ))}
+      <g data-layer="counties" aria-hidden="true"></g>
       {nationPath ? <path d={nationPath} class="nation" /> : null}
     </g>
   </svg>
@@ -92,6 +93,7 @@ const FIPS_TO_CODE = {
   '47':'TN','48':'TX','49':'UT','50':'VT','51':'VA','53':'WA','54':'WV',
   '55':'WI','56':'WY','72':'PR'
 };
+const CODE_TO_FIPS = Object.fromEntries(Object.entries(FIPS_TO_CODE).map(([f, code]) => [code, f]));
 function fipsToCode(f) {
   if (!f) return null;
   const s = String(f);
@@ -101,6 +103,19 @@ function fipsToCode(f) {
 
 // --- Selection & deep-link helpers ---
 let selectedFips = null;
+let selectedCountyFips = null;
+let currentStateCode = null;
+
+const countyLayer = svg.querySelector('[data-layer="counties"]');
+const countyElements = new Map();
+let countiesReady = false;
+let localScopeActive = false;
+
+const scopeRoot = document.querySelector('[data-component="scope-selector"]');
+if (scopeRoot) {
+  localScopeActive = scopeRoot.getAttribute('data-local') === '1';
+}
+root.setAttribute('data-local-active', localScopeActive ? '1' : '0');
 
 function emitStateDetail(fips) {
   const detail = fips ? { fips, code: fipsToCode(fips) || null } : null;
@@ -119,19 +134,152 @@ function updateBadge(fips) {
 
 function updateHistory(fips, push) {
   try {
+    const normalized = fips ? String(fips).slice(0, 2).padStart(2, '0') : null;
+    const share = typeof window !== 'undefined' ? window.__T1_SHARE__ : null;
+    const statePayload = normalized ? { fips: normalized } : {};
+    if (share && typeof share.setModel === 'function') {
+      share.setModel({ state: { fips: normalized } });
+      share.scheduleURLUpdate?.({
+        push: !!push,
+        state: statePayload,
+        delay: push ? 0 : 150,
+      });
+      return;
+    }
     const url = new URL(location.href);
-    if (fips) {
-      url.searchParams.set('fips', fips);
+    if (normalized) {
+      url.searchParams.set('fips', normalized);
     } else {
       url.searchParams.delete('fips');
     }
-    const statePayload = fips ? { fips } : {};
     if (push) {
       history.pushState(statePayload, '', url);
     } else {
       history.replaceState(statePayload, '', url);
     }
-  } catch {}
+  } catch (err) {
+    try { console.warn('map: permalink update failed', err); } catch (_e) {}
+  }
+}
+
+let geoProjectionPromise = null;
+let countiesPromise = null;
+let mapSize = { width: 960, height: 520 };
+
+function ensureGeography() {
+  if (geoProjectionPromise) return geoProjectionPromise;
+  geoProjectionPromise = (async () => {
+    try {
+      const [{ geoAlbersUsa, geoPath }, topo] = await Promise.all([
+        import('d3-geo'),
+        import('topojson-client')
+      ]);
+      const res = await fetch('/topo/states-10m.json', { cache: 'force-cache' });
+      if (!res.ok) throw new Error(`states topo fetch failed: ${res.status}`);
+      const topoJson = await res.json();
+      const states = topo.feature(topoJson, topoJson.objects.states);
+      const projection = geoAlbersUsa().fitSize([mapSize.width, mapSize.height], states);
+      const path = geoPath(projection);
+      return { projection, path };
+    } catch (err) {
+      try { console.warn('map: failed to initialise geography', err); } catch (e) {}
+      return null;
+    }
+  })();
+  return geoProjectionPromise;
+}
+
+function highlightCounty(fips) {
+  if (!countyLayer) return;
+  if (selectedCountyFips) {
+    const prev = countyElements.get(selectedCountyFips);
+    if (prev) prev.classList.remove('county--selected');
+  }
+  selectedCountyFips = fips || null;
+  if (selectedCountyFips) {
+    const next = countyElements.get(selectedCountyFips);
+    if (next) next.classList.add('county--selected');
+  }
+}
+
+function setCountyVisibility(stateCode) {
+  if (!countyLayer) return;
+  countyElements.forEach((el) => {
+    if (!stateCode || el.getAttribute('data-state') === stateCode) {
+      el.setAttribute('data-visible', '1');
+    } else {
+      el.removeAttribute('data-visible');
+    }
+  });
+  if (selectedCountyFips) {
+    const el = countyElements.get(selectedCountyFips);
+    if (!el || el.getAttribute('data-state') !== stateCode) {
+      highlightCounty(null);
+    }
+  }
+}
+
+function ensureCountyLayerLoaded() {
+  if (!countyLayer) return Promise.resolve();
+  if (countiesReady) return Promise.resolve();
+  if (countiesPromise) return countiesPromise;
+  countiesPromise = (async () => {
+    const geo = await ensureGeography();
+    if (!geo || !geo.path) return;
+    let href = '/local/counties-sample.geojson';
+    try {
+      const pack = window.__T1_PACK__ || window.__t1_pack || null;
+      const candidate = pack && pack.registry && pack.registry.layers && pack.registry.layers.counties;
+      if (candidate && candidate.href) href = candidate.href;
+    } catch {}
+    try {
+      const res = await fetch(href, { cache: 'reload' });
+      if (!res.ok) throw new Error(`counties fetch failed: ${res.status}`);
+      const data = await res.json();
+      const list = (data && data.features) || [];
+      const NS = 'http://www.w3.org/2000/svg';
+      list.forEach((feature) => {
+        const props = feature && feature.properties ? feature.properties : {};
+        const fips = String(props.fips || props.GEOID || '');
+        if (!fips) return;
+        const state = (props.state || fipsToCode(fips.slice(0, 2)) || '').toUpperCase();
+        const name = props.name || props.NAME || '';
+        const d = geo.path(feature);
+        if (!d) return;
+        const path = document.createElementNS(NS, 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('data-county-fips', fips);
+        path.setAttribute('data-state', state);
+        if (name) path.setAttribute('data-county-name', name);
+        path.classList.add('county');
+        countyLayer.appendChild(path);
+        countyElements.set(fips, path);
+      });
+      countiesReady = true;
+      if (selectedCountyFips) {
+        highlightCounty(selectedCountyFips);
+      }
+    } catch (err) {
+      try { console.warn('map: failed to load counties overlay', err); } catch (e) {}
+    }
+  })();
+  return countiesPromise;
+}
+
+function syncCountyLayer() {
+  if (!countyLayer) return;
+  const active = localScopeActive && !!currentStateCode;
+  root.setAttribute('data-local-active', active ? '1' : '0');
+  if (!active) {
+    countyLayer.setAttribute('aria-hidden', 'true');
+    setCountyVisibility(null);
+    highlightCounty(null);
+    return;
+  }
+  countyLayer.setAttribute('aria-hidden', 'false');
+  ensureCountyLayerLoaded().then(() => {
+    setCountyVisibility(currentStateCode);
+  });
 }
 
 function clearSelection({ emit = true, push = false } = {}) {
@@ -141,6 +289,9 @@ function clearSelection({ emit = true, push = false } = {}) {
     if (prev) prev.classList.remove('state--selected');
   }
   selectedFips = null;
+  currentStateCode = null;
+  syncCountyLayer();
+  highlightCounty(null);
   updateBadge(null);
   let hadParam = false;
   try {
@@ -171,6 +322,8 @@ function selectState(fips, { emit = true, push = false } = {}) {
 
   selectedFips = fips;
   next.classList.add('state--selected');
+  currentStateCode = fipsToCode(fips) || currentStateCode;
+  syncCountyLayer();
   updateBadge(fips);
 
   try { console.log('selectState', { fips, code: fipsToCode(fips) || null }); } catch (e) {}
@@ -220,6 +373,50 @@ window.addEventListener('popstate', (e) => {
     // is resilient to overlays or small layout differences.
     svg.addEventListener('click', (ev) => {
       try {
+        if (localScopeActive) {
+          let countyPath = null;
+          if (ev.target instanceof Element) {
+            countyPath = ev.target.closest ? ev.target.closest('.county[data-visible="1"]') : null;
+          }
+          if (!countyPath && document.elementsFromPoint) {
+            const els = document.elementsFromPoint(ev.clientX, ev.clientY);
+            for (const el of els) {
+              if (!(el instanceof Element)) continue;
+              const c = el.closest ? el.closest('.county[data-visible="1"]') : (el.classList && el.classList.contains('county') ? el : null);
+              if (c) { countyPath = c; break; }
+            }
+          }
+          if (!countyPath && !document.elementsFromPoint && document.elementFromPoint) {
+            const el = document.elementFromPoint(ev.clientX, ev.clientY);
+            countyPath = el && el.closest ? el.closest('.county[data-visible="1"]') : null;
+          }
+          if (countyPath) {
+            const countyFips = countyPath.getAttribute('data-county-fips');
+            if (countyFips) {
+              const stateAttr = (countyPath.getAttribute('data-state') || '').toUpperCase();
+              const stateCode = stateAttr || fipsToCode(countyFips.slice(0, 2)) || null;
+              const stateFips = ((stateCode && CODE_TO_FIPS[stateCode]) || countyFips.slice(0, 2) || '').padStart(2, '0');
+              if (stateFips) {
+                if (!selectedFips || selectedFips !== stateFips) {
+                  selectState(stateFips, { emit: true, push: true });
+                }
+                currentStateCode = stateCode || currentStateCode;
+                syncCountyLayer();
+              }
+              highlightCounty(countyFips);
+              const detail = {
+                fipsCounty: countyFips,
+                countyName: countyPath.getAttribute('data-county-name') || undefined,
+                state: stateCode || undefined,
+                stateFips: stateFips || undefined,
+                source: 'map'
+              };
+              window.dispatchEvent(new CustomEvent('t1:locality-changed', { detail }));
+              return;
+            }
+          }
+        }
+
         // Prefer the event target. If an overlay sits on top of the svg (e.g. a
         // panel that visually overlaps), use elementsFromPoint to search the
         // stack for a .state element underneath.
@@ -236,12 +433,10 @@ window.addEventListener('popstate', (e) => {
               const p = e.closest ? e.closest('.state') : (e.classList && e.classList.contains('state') ? e : null);
               if (p) { path = p; break; }
             }
-            // debug overlay situation
-                if (path && els[0] !== path) {
-                  try { console.log('map:click overlay hit top element', els[0], 'found state underneath', path); } catch (e) {}
-                }
-          } else {
-            // fallback to elementFromPoint
+            if (path && els[0] !== path) {
+              try { console.log('map:click overlay hit top element', els[0], 'found state underneath', path); } catch (e) {}
+            }
+          } else if (document.elementFromPoint) {
             const el = document.elementFromPoint(ev.clientX, ev.clientY);
             path = el && el.closest ? el.closest('.state') : (el && el.classList && el.classList.contains('state') ? el : null);
           }
@@ -267,6 +462,7 @@ window.addEventListener('popstate', (e) => {
   let vb = { x: vbX || 0, y: vbY || 0, w: vbW || 960, h: vbH || 520 };
   const WIDTH = vb.w;
   const HEIGHT = vb.h;
+  mapSize = { width: WIDTH, height: HEIGHT };
   const minW = WIDTH * 0.15; // max zoom-in
   const maxW = WIDTH * 1.8;  // max zoom-out
 
@@ -451,6 +647,38 @@ window.addEventListener('popstate', (e) => {
         setViewBox();
       }
     });
+
+    window.addEventListener('t1:scope-changed', (event) => {
+      const detail = event.detail || {};
+      if (typeof detail.local === 'boolean') {
+        localScopeActive = detail.local;
+        syncCountyLayer();
+      }
+    });
+
+    window.addEventListener('t1:locality-changed', (event) => {
+      const detail = event.detail || {};
+      const countyFips = detail.fipsCounty || detail.countyFips || detail.fips || null;
+      const possibleState = detail.state ? String(detail.state).toUpperCase() : null;
+      const stateCode = possibleState || (countyFips ? fipsToCode(String(countyFips).slice(0, 2)) : null);
+      if (stateCode) {
+        const stateFips = ((CODE_TO_FIPS[stateCode]) || (countyFips ? String(countyFips).slice(0, 2) : '')).padStart(2, '0');
+        if (stateFips && (!selectedFips || selectedFips !== stateFips)) {
+          selectState(stateFips, { emit: true, push: false });
+        }
+        currentStateCode = stateCode;
+        syncCountyLayer();
+      }
+      if (countyFips) {
+        ensureCountyLayerLoaded().then(() => {
+          highlightCounty(String(countyFips));
+        });
+      } else {
+        highlightCounty(null);
+      }
+    });
+
+    syncCountyLayer();
   }
 
   if (document.readyState === 'loading') {
@@ -473,8 +701,3 @@ if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: { fips: f, cod
   }
 
 </script>
-
-
-
-
-

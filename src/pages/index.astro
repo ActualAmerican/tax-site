@@ -13,6 +13,7 @@ import TaxDeadlinesBanner from '../components/TaxDeadlinesBanner.astro';
 const packSerialized = JSON.stringify(pack).replace(/</g, '\\u003c');
 const packInline = `JSON.parse(decodeURIComponent('${encodeURIComponent(packSerialized)}'))`;
 const seedPackScript = `(function(){try{const pack=${packInline};if(!window.__t1_pack)window.__t1_pack=pack;if(!window.__T1_PACK__)window.__T1_PACK__=pack;}catch(err){console.warn('seedPackScript failed',err);}})();`;
+const { default: permalinkControllerSrc } = await import('../scripts/permalink-controller.ts?url');
 const faqJson = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
@@ -49,7 +50,8 @@ const faqJson = JSON.stringify({
     <script type="application/ld+json" set:html={faqJson}></script>
   </head>
   <body>
-    <script type="module" set:html={seedPackScript}></script>
+    <script set:html={seedPackScript}></script>
+    <script type="module" src={permalinkControllerSrc}></script>
     <main class="container stack">
       <header class="page-header stack">
         <div class="page-header__title">

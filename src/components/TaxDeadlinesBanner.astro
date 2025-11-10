@@ -3,17 +3,15 @@ const { stateCode = '' } = Astro.props ?? {};
 ---
 
 <details class="deadlines" open data-component="tax-deadlines" data-state={stateCode}>
-  <summary>
-    <div class="deadlines__summary">
-      <span class="deadlines__eyebrow">Upcoming tax deadlines</span>
-      <div class="deadlines__actions">
-        <button type="button" class="deadlines__remind" aria-label="Remind me about upcoming deadlines">
-          Remind me
-        </button>
-        <span class="deadlines__toggle">Collapse</span>
-      </div>
-    </div>
+  <summary class="deadlines__summary">
+    <span class="deadlines__eyebrow">Upcoming tax deadlines</span>
+    <span class="deadlines__toggle">Collapse</span>
   </summary>
+  <div class="deadlines__actions">
+    <button type="button" class="deadlines__remind" aria-label="Remind me about upcoming deadlines">
+      Remind me
+    </button>
+  </div>
   <div class="deadlines__body">
     <div class="deadlines__row">
       <span class="deadlines__label">Tax Day</span>
@@ -69,3 +67,4 @@ const { stateCode = '' } = Astro.props ?? {};
     });
   })();
 </script>
+
