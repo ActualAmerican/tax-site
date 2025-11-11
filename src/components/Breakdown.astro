@@ -2,6 +2,7 @@
 /* Breakdown panel (bundled module import) */
 const { initialState = null, compareSlot } = Astro.props;
 const slot = compareSlot ?? 'solo';
+const isCompareMode = slot === 'left' || slot === 'right';
 const initialCode = initialState ?? '';
 const initialLabel = initialState ?? '--';
 const hasInitial = Boolean(initialState);
@@ -9,7 +10,7 @@ const exportHref = hasInitial ? `/report?state=${initialCode}` : '#';
 const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
 ---
 <div
-  class="panel stack"
+  class={`panel stack breakdown-panel${isCompareMode ? ' breakdown-panel--compact' : ''}`}
   data-t1-breakdown
   data-slot={slot}
   data-state={initialCode}
@@ -58,10 +59,28 @@ const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
 <script type="module">
 (function () {
   // Panel root
-  const root =
-    (document.currentScript && document.currentScript.previousElementSibling) ||
-    document.querySelector('[data-t1-breakdown]');
+  const claimPanelRoot = () => {
+    // Prefer the panel element that rendered immediately before this inline script.
+    const scriptEl = document.currentScript || null;
+    if (scriptEl) {
+      let prev = scriptEl.previousElementSibling;
+      while (prev) {
+        if (prev.hasAttribute && prev.hasAttribute('data-t1-breakdown')) return prev;
+        prev = prev.previousElementSibling;
+      }
+    }
+    // Fallback: grab the first unclaimed panel so multiple instances can initialize independently.
+    const candidates = document.querySelectorAll('[data-t1-breakdown]');
+    for (const el of candidates) {
+      if (!el.hasAttribute('data-breakdown-bound')) return el;
+    }
+    return null;
+  };
+
+  const root = claimPanelRoot();
   if (!root) return;
+  if (root.hasAttribute('data-breakdown-bound')) return;
+  root.setAttribute('data-breakdown-bound', '1');
 
   const slot       = root.getAttribute('data-slot') || 'solo';
   const stateLabel = root.querySelector('#bd-state');
@@ -102,6 +121,15 @@ const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
     ? { local: false, state: false, federal: false }
     : { local: false, state: true, federal: true };
   const scopeFlags = { ...initialScopes };
+  const isCompareMode = slot !== 'solo';
+  if (isCompareMode) {
+    if (root) root.classList.add('breakdown-panel--compact');
+    if (compareLink) {
+      compareLink.hidden = true;
+      compareLink.setAttribute('aria-hidden', 'true');
+      compareLink.setAttribute('tabindex', '-1');
+    }
+  }
   function applyToolbarState() {
     const active = Boolean(currentState);
     if (stateLabel) stateLabel.textContent = active ? currentState : '--';
@@ -883,7 +911,7 @@ function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
   }
 
   // Copy link (local toolbar)
-  copyBtn?.addEventListener('click', async () => {
+  async function handleCopyClick() {
     let shareURL = location.href;
     try {
       const share = typeof window !== 'undefined' ? window.__T1_SHARE__ : null;
@@ -898,13 +926,36 @@ function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
     }
     try {
       await navigator.clipboard.writeText(shareURL);
-      copyBtn.textContent = 'Copied!';
-      setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1200);
       showCopyToast('Link copied');
     } catch (err) {
       try { console.warn('Breakdown: clipboard write failed', err); } catch (_e) {}
       showCopyToast('Copy failed', 'error');
     }
+  }
+  copyBtn?.addEventListener('click', handleCopyClick);
+
+  function triggerExternalAction(action) {
+    if (!action) return;
+    if (action === 'export') {
+      if (!exportLink) return;
+      const href = exportLink.getAttribute('href');
+      if (!href || href === '#' || exportLink.classList.contains('is-disabled')) return;
+      try {
+        window.open(href, '_blank', 'noopener');
+      } catch {
+        location.href = href;
+      }
+    } else if (action === 'chart') {
+      pieBtn?.click();
+    } else if (action === 'copy') {
+      handleCopyClick();
+    }
+  }
+
+  window.addEventListener('t1:breakdown-action', (event) => {
+    const detail = event.detail || {};
+    if (detail.slot && detail.slot !== slot) return;
+    triggerExternalAction(detail.action);
   });
 
   // Open chart (pie modal)

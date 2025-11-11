@@ -5,43 +5,23 @@ import {
   mergeModel,
 } from '../lib/share.ts';
 
-declare global {
-  interface Window {
-    __T1_SHARE__?: {
-      version: string | null;
-      getModel: () => ReturnType<typeof createDefaultModel>;
-      setModel: (patch: Record<string, unknown>) => ReturnType<typeof createDefaultModel>;
-      scheduleURLUpdate: (opts?: { delay?: number; push?: boolean; state?: unknown }) => void;
-      encode: () => URL;
-      flush: (opts?: { push?: boolean; state?: unknown }) => void;
-    };
-    __T1_SHARE_MODEL__?: ReturnType<typeof createDefaultModel>;
-    __T1_SHARE_UTILS__?: {
-      createDefaultModel: typeof createDefaultModel;
-      mergeModel: typeof mergeModel;
-      encode: typeof encodeShare;
-    };
-    __T1_PACK__?: { registry?: { pack_version?: string } };
-    __t1_pack?: { registry?: { pack_version?: string } };
-    __T1_PACK_VERSION__?: string | null;
-  }
-}
-
 const win = typeof window !== 'undefined' ? window : undefined;
 
 if (win) {
   const runSoon =
     typeof queueMicrotask === 'function'
-      ? queueMicrotask.bind(window)
-      : (fn: () => void) => window.setTimeout(fn, 0);
+      ? queueMicrotask.bind(win)
+      : (fn) => win.setTimeout(fn, 0);
 
-  const resolvePackVersion = (): string | null => {
+  const resolvePackVersion = () => {
     try {
       const seeded = win.__T1_PACK__ || win.__t1_pack;
       const version = seeded?.registry?.pack_version;
       if (typeof version === 'string' && version.trim()) return version;
     } catch (err) {
-      try { console.warn('permalink: failed to resolve pack version', err); } catch (_) {}
+      try {
+        console.warn('permalink: failed to resolve pack version', err);
+      } catch (_) {}
     }
     return null;
   };
@@ -53,7 +33,9 @@ if (win) {
     try {
       return decodeShare(win.location, { packVersion: PACK_VERSION || undefined });
     } catch (err) {
-      try { console.warn('permalink: decode failed, using defaults', err); } catch (_) {}
+      try {
+        console.warn('permalink: decode failed, using defaults', err);
+      } catch (_) {}
       return createDefaultModel({ packVersion: PACK_VERSION || undefined });
     }
   };
@@ -69,7 +51,7 @@ if (win) {
       packVersion: PACK_VERSION || undefined,
     });
 
-  const flush = ({ push = false, state }: { push?: boolean; state?: unknown } = {}) => {
+  const flush = ({ push = false, state } = {}) => {
     try {
       const encoded = encodeCurrent();
       const href = encoded.toString();
@@ -85,11 +67,13 @@ if (win) {
         win.history.replaceState(payload, '', href);
       }
     } catch (err) {
-      try { console.warn('permalink: flush failed', err); } catch (_) {}
+      try {
+        console.warn('permalink: flush failed', err);
+      } catch (_) {}
     }
   };
 
-  const scheduleURLUpdate = ({ delay = 150, push = false, state }: { delay?: number; push?: boolean; state?: unknown } = {}) => {
+  const scheduleURLUpdate = ({ delay = 150, push = false, state } = {}) => {
     if (push) {
       flush({ push: true, state });
       return;
@@ -101,12 +85,14 @@ if (win) {
     }, delay);
   };
 
-  const setModel = (patch: Record<string, unknown> = {}) => {
+  const setModel = (patch = {}) => {
     try {
       model = mergeModel(model, patch, { packVersion: PACK_VERSION || undefined });
       win.__T1_SHARE_MODEL__ = model;
     } catch (err) {
-      try { console.warn('permalink: merge failed', err); } catch (_) {}
+      try {
+        console.warn('permalink: merge failed', err);
+      } catch (_) {}
     }
     return model;
   };
@@ -153,7 +139,9 @@ if (win) {
         );
       }
     } catch (err) {
-      try { console.warn('permalink: broadcast failed', err); } catch (_) {}
+      try {
+        console.warn('permalink: broadcast failed', err);
+      } catch (_) {}
     }
   };
 
@@ -181,8 +169,9 @@ if (win) {
       win.__T1_SHARE_MODEL__ = model;
       runSoon(() => broadcast('permalink-popstate'));
     } catch (err) {
-      try { console.warn('permalink: popstate decode failed', err); } catch (_) {}
+      try {
+        console.warn('permalink: popstate decode failed', err);
+      } catch (_) {}
     }
   });
 }
-

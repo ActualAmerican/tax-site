@@ -33,6 +33,154 @@ a {
 .grid-2 {
   grid-template-columns: 1fr 1fr;
 }
+.breakdown-panel--compact .toolbar {
+  display: none;
+}
+.compare-breakdowns__grid {
+  display: grid;
+  gap: 1.25rem;
+}
+@media (max-width: 959px) {
+  .compare-breakdowns__grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (min-width: 960px) {
+  .compare-breakdowns__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+.compare-breakdowns__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.compare-breakdowns__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.compare-layout {
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+.compare-toolbar {
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+.compare-toolbar__group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.compare-toolbar__group--primary {
+  width: 100%;
+  justify-content: flex-start;
+}
+.compare-actions__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.action-pill {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(15, 21, 32, 0.8);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.action-pill:hover:not(.is-disabled) {
+  background: rgba(26, 32, 44, 1);
+}
+.action-pill.is-disabled,
+.action-pill:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.compare-actions__status {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.compare-chart {
+  display: grid;
+  gap: 1rem;
+}
+@media (min-width: 700px) {
+  .compare-chart {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.compare-chart__panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem;
+  background: rgba(10, 16, 25, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.compare-chart__panel header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+.compare-chart__panel--empty {
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  min-height: 120px;
+}
+.compare-chart__bar {
+  display: flex;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.05);
+}
+.compare-chart__bar span {
+  display: inline-block;
+  height: 100%;
+}
+.compare-chart__bar .empty-bar {
+  flex: 1;
+  background: transparent;
+}
+.compare-chart__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+}
+.compare-chart__legend li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--muted);
+}
+.compare-chart__legend li span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-right: 0.35rem;
+}
 /* Two-column layout with a fixed-width sidebar and fluid main area */
 .grid--sidebar {
   grid-template-columns: 420px 1fr;

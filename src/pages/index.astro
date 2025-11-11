@@ -9,11 +9,11 @@ import ContextCards from '../components/ContextCards.astro';
 import pack from '../../data/packs/2025.1.0.json';
 import Modal from '../components/Modal.astro';
 import TaxDeadlinesBanner from '../components/TaxDeadlinesBanner.astro';
+import permalinkControllerSrc from '../scripts/permalink-controller.js?url';
 
 const packSerialized = JSON.stringify(pack).replace(/</g, '\\u003c');
 const packInline = `JSON.parse(decodeURIComponent('${encodeURIComponent(packSerialized)}'))`;
 const seedPackScript = `(function(){try{const pack=${packInline};if(!window.__t1_pack)window.__t1_pack=pack;if(!window.__T1_PACK__)window.__T1_PACK__=pack;}catch(err){console.warn('seedPackScript failed',err);}})();`;
-const { default: permalinkControllerSrc } = await import('../scripts/permalink-controller.ts?url');
 const faqJson = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
