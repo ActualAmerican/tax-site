@@ -1,13 +1,163 @@
-import {
-  currentURL,
-  readInputsFromURL,
-  buildCompareURL,
-  linkToMainWithInputs,
-  copyToClipboard,
-} from '../lib/url/share.ts';
-
 const CONFIG_ID = 'compare-config';
 const DEFAULT_STATE_LABEL = 'Select a state';
+const DEFAULT_INPUTS = {
+  filingStatus: 'single',
+  income: 60000,
+  homeowner: true,
+  homeValue: 300000,
+  miles: 12000,
+  mpg: 28,
+  spendingShare: 0.6,
+  taxableShare: 0.55,
+  includeFederal: true,
+  ltcg: 0,
+};
+const DEFAULT_SCOPE = { local: false, state: true, federal: true };
+const SCOPE_BITS = { local: 1, state: 2, federal: 4 };
+const FILING_STATUS_MAP = {
+  single: 'single',
+  s: 'single',
+  0: 'single',
+  married: 'married',
+  m: 'married',
+  1: 'married',
+  hoh: 'hoh',
+  head: 'hoh',
+  2: 'hoh',
+};
+
+const NUMERIC_RE = /[^0-9.-]/g;
+
+const currentURL = () => new URL(window.location.href);
+
+const parseNumber = (value, fallback = 0) => {
+  if (value == null) return fallback;
+  const raw = String(value).trim();
+  if (!raw) return fallback;
+  const normalized = Number(raw.replace(NUMERIC_RE, ''));
+  return Number.isFinite(normalized) ? normalized : fallback;
+};
+
+const parseShare = (value, fallback) => {
+  const num = parseNumber(value, fallback);
+  if (!Number.isFinite(num)) return fallback;
+  if (Math.abs(num) > 1 && Math.abs(num) <= 100) return Math.max(0, Math.min(0.95, num / 100));
+  return Math.max(0, Math.min(0.95, num));
+};
+
+const parseBool = (value, fallback) => {
+  if (value == null || value === '') return fallback;
+  const normalized = String(value).trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (normalized === '1' || normalized === 'true' || normalized === 'yes') return true;
+  if (normalized === '0' || normalized === 'false' || normalized === 'no') return false;
+  return fallback;
+};
+
+const normalizeZip = (value) => {
+  if (value == null) return null;
+  const digits = String(value).trim().replace(/\D+/g, '');
+  if (!digits) return null;
+  return digits.length >= 5 ? digits.slice(0, 5) : digits.padStart(5, '0');
+};
+
+const normalizeCountyFips = (value) => {
+  if (value == null) return null;
+  const digits = String(value).trim().replace(/\D+/g, '');
+  if (!digits) return null;
+  if (digits.length >= 5) return digits.slice(0, 5);
+  if (digits.length <= 2) return digits.padStart(5, '0');
+  return digits.padStart(5, '0');
+};
+
+const normalizeFilingStatus = (value) => {
+  if (value == null) return DEFAULT_INPUTS.filingStatus;
+  const key = String(value).trim().toLowerCase();
+  return FILING_STATUS_MAP[key] || DEFAULT_INPUTS.filingStatus;
+};
+
+const maskToScope = (mask, fallback = DEFAULT_SCOPE) => {
+  if (mask == null || mask === '') return { ...fallback };
+  const numeric = Number(String(mask).replace(/[^0-9]/g, ''));
+  if (!Number.isFinite(numeric)) return { ...fallback };
+  return {
+    local: (numeric & SCOPE_BITS.local) === SCOPE_BITS.local,
+    state: (numeric & SCOPE_BITS.state) === SCOPE_BITS.state,
+    federal: (numeric & SCOPE_BITS.federal) === SCOPE_BITS.federal,
+  };
+};
+
+const readInputsFromURL = (u) => {
+  try {
+    const url = u instanceof URL ? u : new URL(String(u));
+    const params = url.searchParams;
+    const hasAny =
+      ['fs', 'inc', 'own', 'ho', 'home', 'hv', 'miles', 'mi', 'mpg', 'sp', 'ss', 'tx', 'ts', 'fed', 'ltcg', 'sc', 'zip', 'cty'].some(
+        (key) => params.has(key),
+      );
+    if (!hasAny) return null;
+    const filingStatus = normalizeFilingStatus(params.get('fs'));
+    const income = parseNumber(params.get('inc'), DEFAULT_INPUTS.income);
+    const homeowner = parseBool(params.get('own') ?? params.get('ho'), DEFAULT_INPUTS.homeowner);
+    const homeValue = parseNumber(params.get('home') ?? params.get('hv'), DEFAULT_INPUTS.homeValue);
+    const miles = Math.max(0, Math.trunc(parseNumber(params.get('miles') ?? params.get('mi'), DEFAULT_INPUTS.miles)));
+    const mpg = Math.max(1, Math.trunc(parseNumber(params.get('mpg'), DEFAULT_INPUTS.mpg)));
+    const spendingShare = parseShare(params.get('sp') ?? params.get('ss'), DEFAULT_INPUTS.spendingShare);
+    const taxableShare = parseShare(params.get('tx') ?? params.get('ts'), DEFAULT_INPUTS.taxableShare);
+    const includeFederal = parseBool(params.get('fed'), DEFAULT_INPUTS.includeFederal);
+    const ltcg = Math.max(0, Math.round(parseNumber(params.get('ltcg'), DEFAULT_INPUTS.ltcg)));
+    const scopes = maskToScope(params.get('sc'));
+    const locality = {
+      zip: normalizeZip(params.get('zip')),
+      countyFips: normalizeCountyFips(params.get('cty')),
+    };
+    return {
+      filingStatus,
+      income,
+      homeowner,
+      homeValue,
+      miles,
+      mpg,
+      spendingShare,
+      taxableShare,
+      includeFederal,
+      ltcg,
+      scopes,
+      locality,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const buildCompareURL = (a, b, base = currentURL()) => {
+  const url = base instanceof URL ? new URL(base.href) : currentURL();
+  url.searchParams.set('a', (a || '').toUpperCase());
+  url.searchParams.set('b', (b || '').toUpperCase());
+  return url;
+};
+
+const linkToMainWithInputs = (stateCode, base = currentURL()) => {
+  const url = new URL(base.href);
+  url.pathname = '/';
+  if (stateCode) {
+    url.searchParams.set('state', stateCode.toUpperCase());
+  } else {
+    url.searchParams.delete('state');
+  }
+  url.searchParams.delete('a');
+  url.searchParams.delete('b');
+  return url;
+};
+
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const ready = (fn) => {
   if (document.readyState === 'loading') {

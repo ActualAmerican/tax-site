@@ -856,6 +856,42 @@ function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
   window.addEventListener('t1:state-left',  (e) => { if (slot === 'left')  updateState(e.detail || null); });
   window.addEventListener('t1:state-right', (e) => { if (slot === 'right') updateState(e.detail || null); });
 
+  (function syncWithCompareLabels() {
+    if (!isCompareMode) return;
+    if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+    const labelId = slot === 'left' ? 'compare-left-label' : slot === 'right' ? 'compare-right-label' : null;
+    if (!labelId) return;
+    const labelEl = document.getElementById(labelId);
+    if (!labelEl) return;
+
+    const currentLabelCode = () => {
+      const raw = labelEl.getAttribute('data-code');
+      return normalizeStateCode(raw);
+    };
+
+    const applyLabelState = () => {
+      const next = currentLabelCode();
+      if (!next || next === currentState) return;
+      updateState(next);
+    };
+
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        if (record.type === 'attributes' && record.attributeName === 'data-code') {
+          applyLabelState();
+          break;
+        }
+      }
+    });
+
+    observer.observe(labelEl, { attributes: true, attributeFilter: ['data-code'] });
+    applyLabelState();
+
+    // Detach observer if this panel is removed from the document.
+    const teardownObserver = () => observer.disconnect();
+    root.addEventListener('DOMNodeRemoved', teardownObserver, { once: true });
+  })();
+
   window.addEventListener('t1:scope-changed', (event) => {
     if (slot !== 'solo') return;
     const detail = event.detail || {};
