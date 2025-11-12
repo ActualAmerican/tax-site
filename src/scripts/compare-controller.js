@@ -531,14 +531,64 @@ function initCompare(config) {
       showActionStatus(ok ? 'Comparison link copied.' : 'Copy failed.');
     },
     chart: () => {
-      if (!snapL && !snapR) {
+      const entries = [
+        { slot: 'left', summary: snapL?.chartSummary, label: labelFor(currentLeft) },
+        { slot: 'right', summary: snapR?.chartSummary, label: labelFor(currentRight) },
+      ];
+      if (!entries.some((entry) => entry.summary)) {
         showActionStatus('Load at least one state to view charts.');
         return;
       }
-      const html = buildCompareChartHTML();
+      const builder = typeof window !== 'undefined' ? window.__T1_BUILD_CHART__ : null;
+      const initChart = typeof window !== 'undefined' ? window.__T1_INIT_CHART__ : null;
+      if (typeof builder !== 'function' || typeof initChart !== 'function') {
+        showActionStatus('Charts unavailable. Refresh and try again.');
+        return;
+      }
+      const panels = [];
+      const initQueue = [];
+      let panelCount = 0;
+      entries.forEach((entry) => {
+        if (panelCount > 0) {
+          panels.push('<div class="compare-chart-modal__divider" aria-hidden="true"></div>');
+        }
+        const label = entry.label && entry.label !== DEFAULT_STATE_LABEL ? entry.label : 'State';
+        if (!entry.summary) {
+          panels.push(
+            `<section class="compare-chart-modal__panel compare-chart-modal__panel--empty"><p>No data yet for ${label}.</p></section>`,
+          );
+          panelCount += 1;
+          return;
+        }
+        panels.push(
+          `<section class="compare-chart-modal__panel" data-chart-slot="${entry.slot}">
+            <h3 class="chart-modal__panel-title">${label}</h3>
+            ${builder(entry.summary)}
+          </section>`,
+        );
+        initQueue.push({ slot: entry.slot, summary: entry.summary });
+        panelCount += 1;
+      });
+      const html = `<div class="compare-chart-modal">${panels.join('')}</div>`;
       window.dispatchEvent(
         new CustomEvent('t1:modal-open', { detail: { title: 'Comparison charts', html } }),
       );
+      requestAnimationFrame(() => {
+        const modalBody = document.getElementById('t1-modal-body');
+        initQueue.forEach(({ slot, summary }) => {
+          if (!modalBody) return;
+          const root = modalBody.querySelector(
+            `.compare-chart-modal__panel[data-chart-slot="${slot}"] .chart-modal[data-chart-modal]`,
+          );
+          if (root) {
+            try {
+              initChart(summary, root);
+            } catch (err) {
+              console.warn('compare: chart init failed', err);
+            }
+          }
+        });
+      });
     },
   };
 
@@ -554,49 +604,4 @@ function initCompare(config) {
     });
   });
 
-  function buildCompareChartHTML() {
-    const sections = [renderChartPanel(labelFor(currentLeft), snapL), renderChartPanel(labelFor(currentRight), snapR)];
-    return `<div class="compare-chart">${sections.join('')}</div>`;
-  }
-
-  function renderChartPanel(label, snap) {
-    const hasLabel = label && label !== DEFAULT_STATE_LABEL;
-    if (!snap) {
-      const msg = hasLabel ? `No data yet for ${label}.` : 'No data yet.';
-      return `<div class="compare-chart__panel compare-chart__panel--empty"><p>${msg}</p></div>`;
-    }
-    const segments = [
-      { key: 'local', label: 'Local', value: snap.totals.localSubtotal || 0, color: 'var(--scope-local)' },
-      { key: 'state', label: 'State', value: snap.totals.stateSubtotal || 0, color: 'var(--scope-state)' },
-      { key: 'federal', label: 'Federal', value: snap.totals.federalSubtotal || 0, color: 'var(--scope-federal)' },
-    ];
-    const total = segments.reduce((sum, seg) => sum + seg.value, 0) || 1;
-    const bar = segments
-      .map((seg) => {
-        if (!seg.value) return '';
-        const width = Math.max(1, (seg.value / total) * 100);
-        return `<span style="width:${width}%;background:${seg.color}" aria-label="${seg.label} ${money(
-          seg.value,
-        )}"></span>`;
-      })
-      .join('');
-    const legend = segments
-      .map(
-        (seg) =>
-          `<li><span><span class="color-dot" style="background:${seg.color}"></span>${seg.label}</span><span>${money(
-            seg.value,
-          )} · ${pct(seg.value / total)}</span></li>`,
-      )
-      .join('');
-    return `
-      <div class="compare-chart__panel">
-        <header>
-          <strong>${label}</strong>
-          <span>${money(total)}</span>
-        </header>
-        <div class="compare-chart__bar">${bar || '<span class="empty-bar"></span>'}</div>
-        <ul class="compare-chart__legend">${legend}</ul>
-      </div>
-    `;
-  }
 }

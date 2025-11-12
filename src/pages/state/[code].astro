@@ -4,6 +4,7 @@ import '../../styles/utilities.css';
 import Breakdown from '../../components/Breakdown.astro';
 import Assumptions from '../../components/Assumptions.astro';
 import ContextCards from '../../components/ContextCards.astro';
+import Modal from '../../components/Modal.astro';
 import pack from '../../../data/packs/2025.1.0.json';
 const packSerialized = JSON.stringify(pack).replace(/</g, '\\u003c');
 const packInline = `JSON.parse(decodeURIComponent('${encodeURIComponent(packSerialized)}'))`;
@@ -54,6 +55,7 @@ const stateJsonLd = JSON.stringify({
         <ContextCards pack={pack} initialState={s} />
       </section>
     </main>
+    <Modal />
   </body>
 </html>
 

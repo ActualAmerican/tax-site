@@ -94,6 +94,10 @@ const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
   const effEl      = root.querySelector('#eff');
   const barEl      = root.querySelector('#chart');
   let _lastSegments = []; // current stacked-bar segments used by the pie modal
+  let _lastSummary = null; // cached modal summary payload
+  const _baselineCache = new Map();
+  let _sourceIndex = null;
+  let _packStatesCache = null;
 
   // Loading and empty states
   const _tbody = root.querySelector('tbody');
@@ -102,6 +106,7 @@ const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
     _tbody.innerHTML = `<tr class="loading"><td colspan="3">${message}</td></tr>`;
     renderStackedBar([], 0);
     _lastSegments = [];
+    _lastSummary = null;
   }
   function setLoadingRow() {
     setPlaceholderRow('Loading latest tax data...');
@@ -373,7 +378,23 @@ async function loadPack() {
   const fmt = (v) => '$' + (Number(v || 0)).toLocaleString();
   function pctOf(part, total){ return ((part / Math.max(1,total)) * 100).toFixed(0) + '%'; }
 
-function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
+  const CATEGORY_SOURCE = {
+    local_sales: 'sales',
+    local_property: 'property',
+    local_services: 'sales',
+    income: 'income',
+    sales: 'sales',
+    property: 'property',
+    excise: 'excise',
+    fuel: 'fuel',
+    fed_income: 'federal',
+    payroll: 'federal',
+    ltcg: 'federal'
+  };
+
+  const SCOPE_LABEL = { local: 'Local', state: 'State', federal: 'Federal' };
+
+  function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
     const tbody = root.querySelector('tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -432,6 +453,308 @@ function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
     }
   }
 
+  function scopeFromKey(key) {
+    if (!key) return 'state';
+    if (key.startsWith('local_')) return 'local';
+    if (key.startsWith('fed_') || key === 'payroll' || key === 'ltcg') return 'federal';
+    return 'state';
+  }
+
+  function ensureSourceIndex(pack) {
+    if (_sourceIndex) return _sourceIndex;
+    const map = new Map();
+    const list = (pack && pack.registry && Array.isArray(pack.registry.sources)) ? pack.registry.sources : [];
+    for (const entry of list) {
+      if (!entry || !entry.metric || !entry.state) continue;
+      const key = `${entry.metric}:${String(entry.state).toUpperCase()}`;
+      if (!map.has(key)) map.set(key, entry);
+    }
+    _sourceIndex = map;
+    return map;
+  }
+
+  function sourceForCategory(pack, categoryKey, state) {
+    if (!pack || !categoryKey || !state) return null;
+    const metric = CATEGORY_SOURCE[categoryKey];
+    if (!metric) return null;
+    const map = ensureSourceIndex(pack);
+    return map.get(`${metric}:${String(state).toUpperCase()}`) || null;
+  }
+
+  function formatSourceLabel(entry) {
+    if (!entry) return 'Pack data';
+    const metric = entry.metric ? String(entry.metric).toUpperCase() : 'SOURCE';
+    let dateLabel = '';
+    if (entry.checked_at) {
+      const d = new Date(entry.checked_at);
+      if (!isNaN(d.getTime())) {
+        dateLabel = `checked ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      }
+    }
+    return dateLabel ? `${metric} ${dateLabel}` : metric;
+  }
+
+  function listPackStates(pack) {
+    if (_packStatesCache) return _packStatesCache;
+    const set = new Set();
+    const ingest = (rows) => {
+      if (!rows) return;
+      for (const row of rows) {
+        if (row && row.state) set.add(String(row.state).toUpperCase());
+      }
+    };
+    ingest(pack && pack.context);
+    ingest(pack && pack.income);
+    ingest(pack && pack.sales);
+    ingest(pack && pack.property);
+    ingest(pack && pack.excise);
+    ingest(pack && pack.fuel);
+    _packStatesCache = Array.from(set).filter(Boolean);
+    return _packStatesCache;
+  }
+
+  function median(values) {
+    if (!values || !values.length) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 0) {
+      return (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+    return sorted[mid];
+  }
+
+  function snapshotInputs(inputs = {}) {
+    return {
+      filingStatus: inputs.filingStatus,
+      income: Number(inputs.income) || 0,
+      homeValue: Number(inputs.homeValue) || 0,
+      homeowner: !!inputs.homeowner,
+      miles: Number(inputs.miles) || 0,
+      mpg: Number(inputs.mpg) || 0,
+      spendingShare: Number(inputs.spendingShare) || 0.6,
+      taxableShare: Number(inputs.taxableShare) || 0.55,
+      includeFederal: !!inputs.includeFederal,
+      ltcg: Number(inputs.ltcg) || 0,
+      locality: { ...(inputs.locality || {}) }
+    };
+  }
+
+  function buildMixSnapshot(pack, code, inputs, scopes) {
+    if (!pack || !code) return null;
+    const inc  = Number(inputs.income) || 0;
+    const hv   = Number(inputs.homeValue) || 0;
+    const spendingShare = Number(inputs.spendingShare) || 0.6;
+    const scopeFlags = {
+      local: !!scopes.local,
+      state: !!scopes.state,
+      federal: !!scopes.federal
+    };
+
+    const rawLocalNumeric = [];
+    if (scopeFlags.local) {
+      let localSalesMissing = false;
+      let localSalesValue = null;
+      let localSalesTitle;
+      if (pack && pack.sales) {
+        const salesRow = findRow(pack.sales, code);
+        if (!salesRow || isStub(salesRow, 'sales')) {
+          localSalesMissing = true;
+        } else if (typeof salesRow.avg_local_rate === 'number') {
+          const rate = Math.max(0, salesRow.avg_local_rate);
+          localSalesValue = Math.round(inc * spendingShare * rate);
+          const annotations = [];
+          if (inputs.locality && inputs.locality.countyName) {
+            annotations.push(`County: ${inputs.locality.countyName}`);
+          }
+          if (inputs.locality && inputs.locality.fipsCounty) {
+            annotations.push(`FIPS ${inputs.locality.fipsCounty}`);
+          }
+          annotations.push(`Avg. local rate ${(rate * 100).toFixed(1)}%`);
+          localSalesTitle = annotations.join(' | ');
+        } else {
+          localSalesMissing = true;
+        }
+      } else {
+        localSalesMissing = true;
+      }
+      rawLocalNumeric.push({
+        key: 'local_sales',
+        label: 'Local sales add-on',
+        value: localSalesMissing ? null : localSalesValue,
+        title: localSalesMissing ? 'Local rate data pending' : localSalesTitle
+      });
+    }
+
+    let stIncome = 0, stIncomeMissing = false;
+    if (pack && pack.income) {
+      const row = findRow(pack.income, code);
+      if (!row || isStub(row, 'income')) {
+        stIncomeMissing = true;
+      } else if (row.has_income_tax) {
+        const std = row.standard_deduction || 0;
+        const taxable = Math.max(0, inc - std);
+        if (typeof row.flat === 'number') {
+          stIncome = Math.round(taxable * row.flat);
+        } else {
+          const brackets = row.brackets || [];
+          let prev = 0;
+          for (const b of brackets) {
+            const cap = (b.up_to == null) ? taxable : b.up_to;
+            const slice = Math.max(0, Math.min(taxable, cap) - prev);
+            stIncome += Math.round(slice * (b.rate || 0));
+            prev = cap;
+            if (prev >= taxable) break;
+          }
+        }
+      } else {
+        stIncomeMissing = true;
+      }
+    } else {
+      stIncomeMissing = true;
+    }
+
+    let stSales = 0, stSalesMissing = false;
+    if (pack && pack.sales) {
+      const srow = findRow(pack.sales, code);
+      if (!srow || isStub(srow, 'sales')) {
+        stSalesMissing = true;
+      } else {
+        const rate = srow.combined_rate || 0;
+        stSales = Math.round(inc * spendingShare * rate);
+      }
+    } else {
+      stSalesMissing = true;
+    }
+
+    let stProperty = 0, stPropertyMissing = false;
+    if (pack && pack.property) {
+      const prow = findRow(pack.property, code);
+      if (!prow || isStub(prow, 'property')) {
+        stPropertyMissing = true;
+      } else {
+        const effRate = prow.effective_rate || 0;
+        stProperty = Math.round(hv * effRate);
+      }
+    } else {
+      stPropertyMissing = true;
+    }
+
+    const rawStateNumeric = [
+      { key:'income',   label: 'Income tax',   value: stIncomeMissing   ? null : stIncome },
+      { key:'sales',    label: 'Sales tax',    value: stSalesMissing    ? null : stSales },
+      { key:'property', label: 'Property tax', value: stPropertyMissing ? null : stProperty },
+    ];
+
+    const includeFederal = scopeFlags.federal && inputs.includeFederal;
+    const rawFederalNumeric = [];
+    let payrollTitle = '';
+    if (includeFederal) {
+      const f = computeFederalTotals(pack, inputs);
+      rawFederalNumeric.push({ key:'fed_income', label: 'Federal income',     value: f.federalIncome });
+      rawFederalNumeric.push({ key:'payroll',    label: 'Payroll (employee)', value: f.payroll });
+      if (f.ltcgTax > 0) rawFederalNumeric.push({ key:'ltcg', label:'LTCG', value: f.ltcgTax });
+      const p = f.payrollAssumptions || {};
+      if (p && p.ssBase != null) {
+        payrollTitle = [
+          `Social Security wage base $${Number(p.ssBase).toLocaleString()}`,
+          `OASDI ${(p.ssRate*100).toFixed(1)}%`,
+          `Medicare ${(p.mediRate*100).toFixed(2)}%`,
+          `+ ${(p.addRate*100).toFixed(1)}% above $${Number(p.addThresh).toLocaleString()}`
+        ].join(' | ');
+        if (rawFederalNumeric[1]) rawFederalNumeric[1].title = payrollTitle;
+      }
+    }
+
+    const localNumeric = scopeFlags.local ? rawLocalNumeric : [];
+    const stateNumeric = scopeFlags.state ? rawStateNumeric : [];
+    const federalNumeric = includeFederal ? rawFederalNumeric : [];
+
+    const total = [...localNumeric, ...stateNumeric, ...federalNumeric].reduce((a, r) => a + (r.value ?? 0), 0);
+    const localSum = localNumeric.reduce((a, r) => a + (r.value ?? 0), 0);
+    const stateSum = stateNumeric.reduce((a, r) => a + (r.value ?? 0), 0);
+    const fedSum   = federalNumeric.reduce((a, r) => a + (r.value ?? 0), 0);
+
+    const segments = [
+      ...localNumeric.map(r => ({ ...r, scope: 'local' })),
+      ...stateNumeric.map(r => ({ ...r, scope: 'state' })),
+      ...federalNumeric.map(r => ({ ...r, scope: 'federal' })),
+    ]
+      .filter(r => (r.value ?? 0) > 0)
+      .map(r => ({
+        key: r.key,
+        label: r.label,
+        value: r.value ?? 0,
+        color: colorForKey(r.key),
+        scope: r.scope,
+        title: r.title
+      }));
+
+    return {
+      code,
+      income: inc,
+      totals: {
+        total,
+        effectiveRate: total / Math.max(1, inc)
+      },
+      scopeTotals: {
+        local: localSum,
+        state: stateSum,
+        federal: fedSum
+      },
+      segments,
+      localNumeric,
+      stateNumeric,
+      federalNumeric,
+      includeFederal,
+      hasData: segments.length > 0
+    };
+  }
+
+  function baselineCacheKey(pack, inputs, scopes) {
+    return JSON.stringify({
+      pack: (pack && pack.registry && pack.registry.pack_version) || 'unknown',
+      income: Math.round(inputs.income || 0),
+      homeValue: Math.round(inputs.homeValue || 0),
+      includeFederal: inputs.includeFederal ? 1 : 0,
+      scopes
+    });
+  }
+
+  function computeBaselineShares(pack, inputs, scopes) {
+    if (!pack) return { categories: {}, scopes: { local: 0, state: 0, federal: 0 } };
+    const key = baselineCacheKey(pack, inputs, scopes);
+    if (_baselineCache.has(key)) return _baselineCache.get(key);
+    const states = listPackStates(pack);
+    const categoryShares = {};
+    const scopeShares = { local: [], state: [], federal: [] };
+
+    for (const state of states) {
+      const snap = buildMixSnapshot(pack, state, inputs, scopes);
+      if (!snap || snap.totals.total <= 0) continue;
+      const total = snap.totals.total;
+      for (const seg of snap.segments) {
+        if (!categoryShares[seg.key]) categoryShares[seg.key] = [];
+        categoryShares[seg.key].push((seg.value || 0) / total);
+      }
+      scopeShares.local.push((snap.scopeTotals.local || 0) / total);
+      scopeShares.state.push((snap.scopeTotals.state || 0) / total);
+      scopeShares.federal.push((snap.scopeTotals.federal || 0) / total);
+    }
+
+    const baseline = {
+      categories: Object.fromEntries(
+        Object.entries(categoryShares).map(([key, list]) => [key, median(list)])
+      ),
+      scopes: {
+        local: scopeShares.local.length ? median(scopeShares.local) : 0,
+        state: scopeShares.state.length ? median(scopeShares.state) : 0,
+        federal: scopeShares.federal.length ? median(scopeShares.federal) : 0
+      }
+    };
+    _baselineCache.set(key, baseline);
+    return baseline;
+  }
+
   function buildCompareHref(code){
     const u = new URL(location.href);
     u.pathname = '/compare';
@@ -439,7 +762,7 @@ function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
     if (!u.searchParams.get('b')) u.searchParams.set('b','TX');
     return u.toString();
   }
-  // Render stacked bar
+
   function renderStackedBar(segments, total){
     if (!barEl) return;
     barEl.innerHTML = '';
@@ -455,48 +778,354 @@ function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
     }
   }
 
-  // Build inline SVG donut for the modal
-  function buildPieHTML(title, segments){
-    const data = segments.filter(s=>s.value>0);
-    const total = data.reduce((a,s)=>a+s.value,0) || 1;
-    const size=320, cx=size/2, cy=size/2, r=120, r0=72;
+  function buildPieHTML(summary){
+    if (!summary || !summary.categories || !summary.categories.length) {
+      return '<div class="chart-modal__empty">Select a state to view a chart.</div>';
+    }
+    const packBadge = summary.packMeta?.version || '--';
+    const builtLabel = summary.packMeta?.builtAt
+      ? new Date(summary.packMeta.builtAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+      : '';
+    const sourceCount = summary.packMeta?.sourceCount ? `${summary.packMeta.sourceCount} sources` : '';
+    const effPercent = (summary.effectiveRate * 100).toFixed(1) + '%';
+    return `
+      <section class="chart-modal" data-chart-modal>
+        <header class="chart-modal__summary">
+          <div>
+            <small>State</small>
+            <strong data-chart-state>${summary.label || summary.title || 'Tax mix'}</strong>
+          </div>
+          <div>
+            <small>Total tax</small>
+            <strong data-chart-total>${fmt(summary.total)}</strong>
+          </div>
+          <div>
+            <small>Effective rate</small>
+            <strong data-chart-eff>${effPercent}</strong>
+          </div>
+          <div>
+            <small>Pack</small>
+            <strong data-chart-pack>${packBadge}</strong>
+            <span class="chart-modal__provenance" data-chart-provenance>${builtLabel}</span>
+          </div>
+        </header>
+        <section class="chart-modal__scopes" data-chart-scopes></section>
+        <div class="chart-modal__body">
+          <div class="chart-modal__donut">
+            <svg width="320" height="320" viewBox="0 0 320 320" data-chart-arc aria-label="Tax composition"></svg>
+            <div class="chart-modal__center">
+              <span>Active total</span>
+              <strong data-chart-center-total>${fmt(summary.total)}</strong>
+              <small data-chart-center-eff>${effPercent}</small>
+            </div>
+          </div>
+          <div class="chart-modal__top">
+            <h4>Top categories</h4>
+            <ul data-chart-top></ul>
+          </div>
+        </div>
+        <div class="chart-modal__legend" data-chart-legend></div>
+        <footer class="chart-modal__footer" data-chart-footer>
+          ${packBadge !== '--' ? `<span>Pack ${packBadge}</span>` : ''}
+          ${builtLabel ? `<span>Built ${builtLabel}</span>` : ''}
+          ${sourceCount ? `<span>${sourceCount}</span>` : ''}
+        </footer>
+      </section>
+    `;
+  }
 
-    let a0 = -Math.PI/2; // start at top
-    const arcs = [];
-    for (const s of data){
-      const a1 = a0 + (s.value/total) * Math.PI*2;
-      const large = (a1 - a0) > Math.PI ? 1 : 0;
-      const x0 = cx + r*Math.cos(a0), y0 = cy + r*Math.sin(a0);
-      const x1 = cx + r*Math.cos(a1), y1 = cy + r*Math.sin(a1);
-      const x0i = cx + r0*Math.cos(a0), y0i = cy + r0*Math.sin(a0);
-      const x1i = cx + r0*Math.cos(a1), y1i = cy + r0*Math.sin(a1);
-      const d = [
-        `M ${x0} ${y0}`,
-        `A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`,
-        `L ${x1i} ${y1i}`,
-        `A ${r0} ${r0} 0 ${large} 0 ${x0i} ${y0i}`,
-        'Z'
-      ].join(' ');
-      arcs.push(`<path d="${d}" fill="${s.color}" />`);
-      a0 = a1;
+  function initChartModal(summary, rootOverride) {
+    if (!summary || !summary.categories || !summary.categories.length) return;
+    let root = rootOverride || null;
+    if (!root) {
+      const modalBody = document.getElementById('t1-modal-body');
+      if (!modalBody) return;
+      const unbound = modalBody.querySelector('.chart-modal[data-chart-modal]:not([data-chart-bound])');
+      if (!unbound) return;
+      root = unbound;
+    }
+    if (!root || root.hasAttribute('data-chart-bound')) return;
+    root.setAttribute('data-chart-bound', '1');
+
+    const data = {
+      categories: summary.categories,
+      baseline: summary.baseline || { categories: {}, scopes: {} },
+      scopeSnapshot: summary.scopeSnapshot || {},
+      packMeta: summary.packMeta || {},
+      income: summary.income || 0,
+      label: summary.label || summary.title || 'Tax mix'
+    };
+    const state = {
+      activeKeys: new Set(data.categories.map((cat) => cat.key))
+    };
+    if (!state.activeKeys.size) return;
+
+    const ns = 'http://www.w3.org/2000/svg';
+    const ARC = { outer: 120, inner: 70, cx: 160, cy: 160 };
+    const legendEl = root.querySelector('[data-chart-legend]');
+    const topListEl = root.querySelector('[data-chart-top]');
+    const centerTotal = root.querySelector('[data-chart-center-total]');
+    const centerEff = root.querySelector('[data-chart-center-eff]');
+    const totalEl = root.querySelector('[data-chart-total]');
+    const effEl = root.querySelector('[data-chart-eff]');
+    const stateLabelEl = root.querySelector('[data-chart-state]');
+    if (stateLabelEl) stateLabelEl.textContent = data.label;
+    if (totalEl) totalEl.textContent = fmt(summary.total);
+    if (effEl) effEl.textContent = (summary.effectiveRate * 100).toFixed(1) + '%';
+    if (centerTotal) centerTotal.textContent = fmt(summary.total);
+    if (centerEff) centerEff.textContent = (summary.effectiveRate * 100).toFixed(1) + '%';
+    const packEl = root.querySelector('[data-chart-pack]');
+    if (packEl) packEl.textContent = data.packMeta.version || '--';
+    const provEl = root.querySelector('[data-chart-provenance]');
+    if (provEl) {
+      if (data.packMeta.builtAt) {
+        const built = new Date(data.packMeta.builtAt);
+        provEl.textContent = isNaN(built.getTime()) ? data.packMeta.builtAt : built.toLocaleDateString();
+      } else {
+        provEl.textContent = '';
+      }
     }
 
-    const legend = data.map(s => `
-      <div class="legend__item">
-        <span class="legend__swatch" style="background:${s.color}"></span>
-        <span>${s.label} — <strong>${fmt(s.value)}</strong> (${pctOf(s.value,total)})</span>
-      </div>
-    `).join('');
+    const fmtLocal = (val) => '$' + (Number(val || 0)).toLocaleString();
+    const pctLabel = (part, total) => {
+      if (!total) return '0.0%';
+      return ((part / total) * 100).toFixed(1) + '%';
+    };
 
-    return `
-      <div class="stack">
-        <div class="big-number">${title}</div>
-        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-label="Tax composition">
-          ${arcs.join('')}
-        </svg>
-        <div class="legend">${legend}</div>
-      </div>
-    `;
+    const computeActive = () => {
+      const active = data.categories.filter((cat) => state.activeKeys.has(cat.key));
+      const total = active.reduce((sum, cat) => sum + (cat.value || 0), 0);
+      const scopes = { local: 0, state: 0, federal: 0 };
+      for (const cat of active) {
+        scopes[cat.scope] = (scopes[cat.scope] || 0) + (cat.value || 0);
+      }
+      return { active, total, scopes };
+    };
+
+    const buildArcPath = (start, end) => {
+      const r = ARC.outer;
+      const r0 = ARC.inner;
+      const cx = ARC.cx;
+      const cy = ARC.cy;
+      const large = end - start > Math.PI ? 1 : 0;
+      const x0 = cx + r * Math.cos(start);
+      const y0 = cy + r * Math.sin(start);
+      const x1 = cx + r * Math.cos(end);
+      const y1 = cy + r * Math.sin(end);
+      const x0i = cx + r0 * Math.cos(end);
+      const y0i = cy + r0 * Math.sin(end);
+      const x1i = cx + r0 * Math.cos(start);
+      const y1i = cy + r0 * Math.sin(start);
+      return ['M', x0, y0, 'A', r, r, 0, large, 1, x1, y1, 'L', x0i, y0i, 'A', r0, r0, 0, large, 0, x1i, y1i, 'Z'].join(' ');
+    };
+
+    const renderDonut = (snapshot) => {
+      const svg = root.querySelector('[data-chart-arc]');
+      if (!svg) return;
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (!snapshot.active.length || snapshot.total <= 0) {
+        const text = document.createElementNS(ns, 'text');
+        text.setAttribute('x', String(ARC.cx));
+        text.setAttribute('y', String(ARC.cy));
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('fill', 'var(--muted)');
+        text.textContent = 'No data';
+        svg.appendChild(text);
+        return;
+      }
+      let angle = -Math.PI / 2;
+      for (const cat of snapshot.active) {
+        const portion = (cat.value || 0) / snapshot.total;
+        const end = angle + portion * Math.PI * 2;
+        const path = document.createElementNS(ns, 'path');
+        path.setAttribute('d', buildArcPath(angle, end));
+        path.setAttribute('fill', cat.color);
+        path.setAttribute('data-key', cat.key);
+        const tip = `${cat.label}: ${fmtLocal(cat.value)} (${pctLabel(cat.value, snapshot.total)})`;
+        path.setAttribute('title', tip);
+        path.setAttribute('aria-label', tip);
+        svg.appendChild(path);
+        angle = end;
+      }
+    };
+
+    const renderLegend = () => {
+      if (!legendEl) return;
+      legendEl.innerHTML = '';
+      for (const cat of data.categories) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chart-modal__legend-btn';
+        if (!state.activeKeys.has(cat.key)) btn.classList.add('is-muted');
+        btn.dataset.key = cat.key;
+        const label = document.createElement('span');
+        label.className = 'chart-modal__legend-label';
+        const dot = document.createElement('span');
+        dot.className = 'color-dot';
+        dot.style.background = cat.color;
+        label.appendChild(dot);
+        const text = document.createElement('span');
+        text.textContent = cat.label;
+        label.appendChild(text);
+        const metric = document.createElement('span');
+        metric.className = 'chart-modal__legend-metric';
+        metric.textContent = `${fmtLocal(cat.value)} (${cat.pctLabel})`;
+        btn.appendChild(label);
+        btn.appendChild(metric);
+        const tip = [
+          `${cat.label}: ${fmtLocal(cat.value)} (${cat.pctLabel})`,
+          `Scope: ${cat.scopeLabel || 'State'}`,
+          cat.sourceLabel || 'Pack data'
+        ].join('\n');
+        btn.title = tip;
+        legendEl.appendChild(btn);
+      }
+      legendEl.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target.closest('button[data-key]') : null;
+        if (!target) return;
+        const key = target.getAttribute('data-key');
+        if (!key) return;
+        if (state.activeKeys.has(key)) {
+          if (state.activeKeys.size === 1) return;
+          state.activeKeys.delete(key);
+        } else {
+          state.activeKeys.add(key);
+        }
+        updateAll();
+      }, { passive: true });
+    };
+
+    const updateLegendStates = () => {
+      if (!legendEl) return;
+      legendEl.querySelectorAll('button[data-key]').forEach((btn) => {
+        const key = btn.getAttribute('data-key');
+        btn.classList.toggle('is-muted', !state.activeKeys.has(key));
+      });
+    };
+
+    const renderScopes = (snapshot) => {
+      const scopesEl = root.querySelector('[data-chart-scopes]');
+      if (!scopesEl) return;
+      const scopeOrder = [
+        { key: 'local', label: 'Local taxes' },
+        { key: 'state', label: 'State taxes' },
+        { key: 'federal', label: 'Federal taxes' }
+      ].filter((row) => data.scopeSnapshot[row.key]);
+      if (!scopeOrder.length) {
+        scopesEl.innerHTML = '<p class="chart-modal__placeholder">Enable a scope to view totals.</p>';
+        return;
+      }
+      const total = snapshot.total || 1;
+      scopesEl.innerHTML = `
+        <h4>Scope mix</h4>
+        ${scopeOrder.map((scope) => {
+          const actual = (snapshot.scopes[scope.key] || 0) / total;
+          return `
+            <div class="chart-modal__scope-row">
+              <div class="chart-modal__scope-label">${scope.label}</div>
+              <div class="chart-modal__bar">
+                <span class="chart-modal__bar-fill" style="width:${(actual * 100).toFixed(2)}%;background:var(--scope-${scope.key});"></span>
+              </div>
+              <div class="chart-modal__metric">
+                <strong>${fmtLocal(snapshot.scopes[scope.key] || 0)}</strong>
+                <small>${pctLabel(snapshot.scopes[scope.key] || 0, snapshot.total)}</small>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      `;
+    };
+
+    const renderTopList = (snapshot) => {
+      if (!topListEl) return;
+      topListEl.innerHTML = '';
+      const baseTotal = summary.total || 1;
+      const topItems = [...data.categories]
+        .sort((a, b) => (b.value || 0) - (a.value || 0))
+        .slice(0, 5);
+      topItems.forEach((cat) => {
+        const li = document.createElement('li');
+        if (!state.activeKeys.has(cat.key)) li.classList.add('is-muted');
+        const label = document.createElement('div');
+        label.className = 'chart-modal__label';
+        const dot = document.createElement('span');
+        dot.className = 'color-dot';
+        dot.style.background = cat.color;
+        label.appendChild(dot);
+        const span = document.createElement('span');
+        span.textContent = cat.label;
+        label.appendChild(span);
+        const stripe = document.createElement('div');
+        stripe.className = 'chart-modal__stripe';
+        const fill = document.createElement('span');
+        fill.className = 'chart-modal__stripe-fill';
+        const activeShare = state.activeKeys.has(cat.key) ? ((cat.value || 0) / baseTotal) : 0;
+        fill.style.width = `${Math.max(2, activeShare * 100)}%`;
+        fill.style.background = cat.color;
+        stripe.appendChild(fill);
+        const metric = document.createElement('div');
+        metric.className = 'chart-modal__metric';
+        const strong = document.createElement('strong');
+        strong.textContent = fmtLocal(cat.value);
+        const small = document.createElement('small');
+        small.textContent = pctLabel(cat.value, summary.total);
+        metric.appendChild(strong);
+        metric.appendChild(small);
+        li.appendChild(label);
+        li.appendChild(stripe);
+        li.appendChild(metric);
+        topListEl.appendChild(li);
+      });
+    };
+
+    const updateFooter = () => {
+      const footer = root.querySelector('[data-chart-footer]');
+      if (!footer) return;
+      footer.innerHTML = '';
+      if (data.packMeta.version) {
+        const span = document.createElement('span');
+        span.textContent = `Pack ${data.packMeta.version}`;
+        footer.appendChild(span);
+      }
+      if (data.packMeta.builtAt) {
+        const span = document.createElement('span');
+        const built = new Date(data.packMeta.builtAt);
+        span.textContent = `Built ${isNaN(built.getTime()) ? data.packMeta.builtAt : built.toLocaleDateString()}`;
+        footer.appendChild(span);
+      }
+      if (data.packMeta.sourceCount) {
+        const span = document.createElement('span');
+        span.textContent = `${data.packMeta.sourceCount} sources`;
+        footer.appendChild(span);
+      }
+    };
+
+    const updateSummary = (snapshot) => {
+      if (totalEl) totalEl.textContent = fmtLocal(snapshot.total);
+      if (effEl) effEl.textContent = pctLabel(snapshot.total, data.income);
+      if (centerTotal) centerTotal.textContent = fmtLocal(snapshot.total);
+      if (centerEff) centerEff.textContent = pctLabel(snapshot.total, data.income);
+    };
+
+    const updateAll = () => {
+      const snapshot = computeActive();
+      updateSummary(snapshot);
+      renderDonut(snapshot);
+      renderScopes(snapshot);
+      renderTopList(snapshot);
+      updateLegendStates();
+    };
+
+    renderLegend();
+    updateFooter();
+    updateAll();
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.__T1_BUILD_CHART__ = buildPieHTML;
+      window.__T1_INIT_CHART__ = initChartModal;
+    } catch {}
   }
 
   async function computeDemoBreakdown(code) {
@@ -672,6 +1301,7 @@ function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
       if (chipTotal) chipTotal.textContent = '--';
       if (chipEff) chipEff.textContent = '--';
       setPlaceholderRow('Enable a scope to view totals.');
+      _lastSummary = null;
       return;
     }
 
@@ -706,11 +1336,50 @@ function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
     );
 
     // Build stacked-bar segments (local + state + federal) with colors
-    const segments = [...localNumeric, ...stateNumeric, ...federalNumeric]
+    const segments = [
+      ...localNumeric.map(r => ({ ...r, scope: 'local' })),
+      ...stateNumeric.map(r => ({ ...r, scope: 'state' })),
+      ...federalNumeric.map(r => ({ ...r, scope: 'federal' })),
+    ]
       .filter(r => (r.value ?? 0) > 0)
-      .map(r => ({ key:r.key, label:r.label, value:r.value, color: colorForKey(r.key) }));
+      .map(r => ({ key:r.key, label:r.label, value:r.value, color: colorForKey(r.key), scope: r.scope, title: r.title }));
     _lastSegments = segments; // store for "Open chart"
     renderStackedBar(segments, total);
+
+    const packMeta = pack && pack.registry ? {
+      version: pack.registry.pack_version || '',
+      builtAt: pack.registry.built_at || '',
+      sourceCount: Array.isArray(pack.registry.sources) ? pack.registry.sources.length : 0
+    } : { version: '', builtAt: '', sourceCount: 0 };
+    const inputsSnapshot = snapshotInputs(latestInputs);
+    const scopeSnapshot = { local: !!scopeFlags.local, state: !!scopeFlags.state, federal: !!scopeFlags.federal };
+    const baseline = computeBaselineShares(pack, inputsSnapshot, scopeSnapshot);
+    const categoriesDetailed = segments.map(seg => ({
+      ...seg,
+      pct: total ? (seg.value || 0) / total : 0,
+      pctLabel: total ? pctOf(seg.value || 0, total) : '0%',
+      sourceLabel: formatSourceLabel(sourceForCategory(pack, seg.key, code)),
+      scopeLabel: SCOPE_LABEL[seg.scope] || 'State'
+    }));
+    _lastSummary = {
+      state: code,
+      label: (stateLabel && stateLabel.textContent) ? stateLabel.textContent : `${code} tax mix`,
+      title: `${code} tax mix`,
+      total,
+      income: inc,
+      effectiveRate: total / Math.max(1, inc),
+      scopeTotals: {
+        local: localSum,
+        state: stateSum,
+        federal: fedSum
+      },
+      segments,
+      categories: categoriesDetailed,
+      baseline,
+      packMeta,
+      scopeSnapshot,
+      inputs: inputsSnapshot
+    };
 
     // ---- Emit a structured snapshot so Compare can render side-by-side ----
     const snapshot = {
@@ -735,7 +1404,8 @@ function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
         state: stateNumeric,
         federal: federalNumeric
       },
-      scopes: { ...scopeFlags }
+      scopes: { ...scopeFlags },
+      chartSummary: _lastSummary
     };
     root.dispatchEvent(new CustomEvent('t1:breakdown-computed', { detail: snapshot, bubbles: true }));
   }
@@ -996,9 +1666,10 @@ function renderBreakdownRows(localRows, stateRows, federalRows, totals) {
 
   // Open chart (pie modal)
   pieBtn?.addEventListener('click', () => {
-    if (!currentState || !_lastSegments.length) return;
-    const html = buildPieHTML(`${currentState} tax mix`, _lastSegments);
+    if (!currentState || !_lastSegments.length || !_lastSummary) return;
+    const html = buildPieHTML(_lastSummary);
     window.dispatchEvent(new CustomEvent('t1:modal-open', { detail: { title: 'Tax composition', html } }));
+    requestAnimationFrame(() => initChartModal(_lastSummary));
   });
 
   // Initialize from URL (?fips=06 or ?state=CA), else use data-state
