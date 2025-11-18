@@ -6,7 +6,6 @@ import Modal from '../components/Modal.astro';
 import Assumptions from '../components/Assumptions.astro';
 import Inputs from '../components/Inputs.astro';
 import pack from '../../data/packs/2025.1.0.json';
-import permalinkControllerSrc from '../scripts/permalink-controller.js?url';
 import compareControllerSrc from '../scripts/compare-controller.js?url';
 
 const packSerialized = JSON.stringify(pack).replace(/</g, '\\u003c');
@@ -87,7 +86,6 @@ const compareConfigJSON = JSON.stringify({
   </head>
   <body>
     <script type="module" set:html={seedPackScript}></script>
-    <script type="module" src={permalinkControllerSrc}></script>
     <main class="container stack" style="gap:1.25rem">
       <section class="panel stack" style="gap:.75rem">
         <h1 class="heading--tight">Compare states</h1>

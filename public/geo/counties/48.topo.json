@@ -1,0 +1,16 @@
+# from project root
+mkdir -p public/geo/counties
+# Download 1:5m counties shapefile (Census 2023); unzip
+curl -L -o /tmp/cb_2023_us_county_5m.zip https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_us_county_5m.zip
+unzip -o /tmp/cb_2023_us_county_5m.zip -d /tmp/cb_counties
+
+# Convert to TopoJSON and filter Texas (STATEFP=48)
+# Requires node + mapshaper (npm i -g mapshaper)
+npx mapshaper -q \
+  /tmp/cb_counties/cb_2023_us_county_5m.shp \
+  -filter 'STATEFP==="48"' \
+  -simplify 10% keep-shapes \
+  -o format=topojson \
+     name=counties \
+     id-field=GEOID \
+     public/geo/counties/48.topo.json

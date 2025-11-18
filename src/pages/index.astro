@@ -9,7 +9,6 @@ import ContextCards from '../components/ContextCards.astro';
 import pack from '../../data/packs/2025.1.0.json';
 import Modal from '../components/Modal.astro';
 import TaxDeadlinesBanner from '../components/TaxDeadlinesBanner.astro';
-import permalinkControllerSrc from '../scripts/permalink-controller.js?url';
 
 const packSerialized = JSON.stringify(pack).replace(/</g, '\\u003c');
 const packInline = `JSON.parse(decodeURIComponent('${encodeURIComponent(packSerialized)}'))`;
@@ -51,7 +50,6 @@ const faqJson = JSON.stringify({
   </head>
   <body>
     <script set:html={seedPackScript}></script>
-    <script type="module" src={permalinkControllerSrc}></script>
     <main class="container stack">
       <header class="page-header stack">
         <div class="page-header__title">
@@ -85,6 +83,9 @@ const faqJson = JSON.stringify({
         if (og) og.setAttribute('content','T1 - State + Federal Tax Burden Map');
         document.title = 'T1 - State + Federal Tax Burden Map';
       } catch {}
+    </script>
+    <script type="module">
+      import '/src/scripts/map-client.ts';
     </script>
     <!-- Inject the current data pack for all client scripts -->
 <script id="t1-pack" type="application/json" set:html={packSerialized}></script>

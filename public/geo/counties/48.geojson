@@ -1,0 +1,29 @@
+﻿{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "fips": "48453", "state": "TX", "name": "Travis County" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-98.05, 30.0], [-97.3, 30.0], [-97.3, 30.7], [-98.05, 30.7], [-98.05, 30.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "fips": "48201", "state": "TX", "name": "Harris County" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-95.8, 29.5], [-94.9, 29.5], [-94.9, 30.2], [-95.8, 30.2], [-95.8, 29.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "fips": "48113", "state": "TX", "name": "Dallas County" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-97.1, 32.5], [-96.3, 32.5], [-96.3, 33.1], [-97.1, 33.1], [-97.1, 32.5]]]
+      }
+    }
+  ]
+}

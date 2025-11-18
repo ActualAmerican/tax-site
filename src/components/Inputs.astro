@@ -322,6 +322,16 @@ import InputsFederal from './InputsFederal.astro';
           },
         }),
       );
+      window.dispatchEvent(
+        new CustomEvent('t1:map-props', {
+          detail: {
+            stateFips: localityDetail.stateFips ?? shareModel.state?.fips ?? null,
+            countyFips: localityDetail.fipsCounty ?? localityDetail.countyFips ?? null,
+            countyName: localityDetail.countyName ?? null,
+            localScopeEnabled: !!scopeState.local,
+          },
+        }),
+      );
     });
   }
 
@@ -585,6 +595,7 @@ import InputsFederal from './InputsFederal.astro';
 
   window.addEventListener('t1:locality-changed', (event) => {
     const detail = event.detail || {};
+    if (detail.source === 'map') return;
     state.locality = {
       zip: detail.zip,
       city: detail.city,
@@ -595,6 +606,37 @@ import InputsFederal from './InputsFederal.astro';
       source: detail.source || null
     };
     emit();
+  });
+
+  window.addEventListener('t1:map-county-selected', (event) => {
+    const detail = event.detail || {};
+    const countyFips = detail.countyFips ? String(detail.countyFips) : null;
+    const stateFips = detail.stateFips ? String(detail.stateFips).slice(0, 2).padStart(2, '0') : null;
+    const stateCode = detail.stateCode || (stateFips ? FIPS_TO_CODE[stateFips] || null : null);
+    state.locality = {
+      ...(state.locality || {}),
+      countyName: detail.countyName || null,
+      fipsCounty: countyFips,
+      countyFips,
+      state: stateCode || state.locality?.state || null,
+      stateFips: stateFips || state.locality?.stateFips || null,
+      source: 'map'
+    };
+    emit();
+    window.dispatchEvent(
+      new CustomEvent('t1:locality-changed', {
+        detail: {
+          zip: state.locality?.zip || null,
+          city: state.locality?.city || null,
+          countyName: detail.countyName || null,
+          countyFips,
+          fipsCounty: countyFips,
+          state: stateCode || null,
+          stateFips: stateFips || null,
+          source: 'map'
+        },
+      }),
+    );
   });
 
   document.addEventListener('input', (ev) => {
