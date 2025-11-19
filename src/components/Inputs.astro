@@ -1,3 +1,5 @@
+// Inputs.astro
+
 ---
 import ScopeSelector from './ScopeSelector.astro';
 import LocalityPicker from './LocalityPicker.astro';
@@ -595,7 +597,20 @@ import InputsFederal from './InputsFederal.astro';
 
   window.addEventListener('t1:locality-changed', (event) => {
     const detail = event.detail || {};
-    if (detail.source === 'map') return;
+    // Allow map-initiated changes through (we use 'map' and 'map-state' now)
+if (detail.source === 'map' || detail.source === 'map-state') {
+  // still update the internal state.locality so everything stays in sync
+  state.locality = {
+    zip: detail.zip ?? state.locality?.zip,
+    city: detail.city ?? state.locality?.city,
+    countyName: detail.countyName ?? state.locality?.countyName,
+    fipsCounty: detail.fipsCounty || detail.countyFips || detail.fips || state.locality?.fipsCounty,
+    state: detail.state ?? state.locality?.state,
+    stateFips: detail.stateFips ?? state.locality?.stateFips,
+    source: detail.source
+  };
+  // DO NOT return early → let the normal emit() run below
+}
     state.locality = {
       zip: detail.zip,
       city: detail.city,
@@ -609,35 +624,39 @@ import InputsFederal from './InputsFederal.astro';
   });
 
   window.addEventListener('t1:map-county-selected', (event) => {
-    const detail = event.detail || {};
-    const countyFips = detail.countyFips ? String(detail.countyFips) : null;
-    const stateFips = detail.stateFips ? String(detail.stateFips).slice(0, 2).padStart(2, '0') : null;
-    const stateCode = detail.stateCode || (stateFips ? FIPS_TO_CODE[stateFips] || null : null);
+  const detail = event.detail || {};
+  const countyFips = detail.countyFips ? String(detail.countyFips) : null;
+  const stateFips = detail.stateFips ? String(detail.stateFips).slice(0, 2).padStart(2, '0') : null;
+  const stateCode = detail.stateCode || (stateFips ? FIPS_TO_CODE[stateFips] || null : null);
+
+  // 1. First force the STATE selection (this triggers state taxes + breakdown)
+  if (state.locality?.stateFips !== stateFips) {
     state.locality = {
-      ...(state.locality || {}),
+      ...state.locality,
+      state: stateCode || null,
+      stateFips: stateFips || null,
+      countyFips: null,
+      countyName: null,
+      fipsCounty: null,
+      zip: null,
+      city: null,
+      source: 'map-state'   // temporary source so the guard below doesn't block
+    };
+    emit(); // ← this restores the Breakdown immediately
+  }
+
+  // 2. Tiny delay so state finishes calculating, then add the county on top
+  setTimeout(() => {
+    state.locality = {
+      ...state.locality,
       countyName: detail.countyName || null,
-      fipsCounty: countyFips,
       countyFips,
-      state: stateCode || state.locality?.state || null,
-      stateFips: stateFips || state.locality?.stateFips || null,
+      fipsCounty: countyFips,
       source: 'map'
     };
-    emit();
-    window.dispatchEvent(
-      new CustomEvent('t1:locality-changed', {
-        detail: {
-          zip: state.locality?.zip || null,
-          city: state.locality?.city || null,
-          countyName: detail.countyName || null,
-          countyFips,
-          fipsCounty: countyFips,
-          state: stateCode || null,
-          stateFips: stateFips || null,
-          source: 'map'
-        },
-      }),
-    );
-  });
+    emit(); // now county rates load + map highlights correctly
+  }, 250);
+});
 
   document.addEventListener('input', (ev) => {
     const el = ev.target;

@@ -1,12 +1,13 @@
 ---
 import '../styles/tokens.css';
 import '../styles/utilities.css';
+import permalinkControllerSrc from '../scripts/permalink-controller.js?url';
+import compareControllerSrc from '../scripts/compare-controller.js?url';
 import Breakdown from '../components/Breakdown.astro';
 import Modal from '../components/Modal.astro'; 
 import Assumptions from '../components/Assumptions.astro';
 import Inputs from '../components/Inputs.astro';
 import pack from '../../data/packs/2025.1.0.json';
-import compareControllerSrc from '../scripts/compare-controller.js?url';
 
 const packSerialized = JSON.stringify(pack).replace(/</g, '\\u003c');
 const packInline = `JSON.parse(decodeURIComponent('${encodeURIComponent(packSerialized)}'))`;
@@ -187,6 +188,7 @@ const compareConfigJSON = JSON.stringify({
     </main>
     <Modal />
     <script id="compare-config" type="application/json" set:html={compareConfigJSON}></script>
+    <script type="module" src={permalinkControllerSrc}></script>
     <script type="module" src={compareControllerSrc}></script>
   </body>
 </html>

@@ -1,6 +1,8 @@
 ---
 import '../styles/tokens.css';
 import '../styles/utilities.css';
+import permalinkControllerSrc from '../scripts/permalink-controller.js?url';
+import mapClientSrc from '../scripts/map-client.entry.js?url';
 import Map from '../components/Map.astro';
 import Inputs from '../components/Inputs.astro';
 import Breakdown from '../components/Breakdown.astro';
@@ -84,9 +86,6 @@ const faqJson = JSON.stringify({
         document.title = 'T1 - State + Federal Tax Burden Map';
       } catch {}
     </script>
-    <script type="module">
-      import '/src/scripts/map-client.ts';
-    </script>
     <!-- Inject the current data pack for all client scripts -->
 <script id="t1-pack" type="application/json" set:html={packSerialized}></script>
 <script type="module">
@@ -98,5 +97,7 @@ const faqJson = JSON.stringify({
     console.warn('t1-pack inject failed', e);
   }
 </script>
+    <script type="module" src={permalinkControllerSrc}></script>
+    <script type="module" src={mapClientSrc}></script>
   </body>
 </html>
