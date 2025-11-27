@@ -70,6 +70,14 @@ if (import.meta.env.SSR) {
   if (!root) return;
   const svg = root.querySelector('svg');
   if (!svg) return;
+  const getController = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return window.__T1_CONTROLLER__ || null;
+    } catch {
+      return null;
+    }
+  };
   // breadcrumb so we know the map script actually ran
   root.setAttribute('data-js', 'ready');
   // runtime diagnostic
@@ -105,11 +113,14 @@ function fipsToCode(f) {
 let selectedFips = null;
 let selectedCountyFips = null;
 let currentStateCode = null;
+let suppressHistorySync = false;
 
 const countyLayer = svg.querySelector('[data-layer="counties"]');
 const countyElements = new Map();
+const countyLayerEnabled = false;
 let countiesReady = false;
 let localScopeActive = false;
+let forceCountyMode = false;
 
 const scopeRoot = document.querySelector('[data-component="scope-selector"]');
 if (scopeRoot) {
@@ -118,8 +129,20 @@ if (scopeRoot) {
 root.setAttribute('data-local-active', localScopeActive ? '1' : '0');
 
 function emitStateDetail(fips) {
-  const detail = fips ? { fips, code: fipsToCode(fips) || null } : null;
-  window.dispatchEvent(new CustomEvent('t1:state', { detail }));
+  if (fips) {
+    const normalized = String(fips).slice(0, 2).padStart(2, '0');
+    const detail = {
+      fips,
+      code: fipsToCode(fips) || null,
+      geoSelection: { layer: 'state', stateFips: normalized, countyFips: null },
+    };
+    window.dispatchEvent(new CustomEvent('t1:state', { detail }));
+    return;
+  }
+  const emptyDetail = {
+    geoSelection: { layer: 'state', stateFips: null, countyFips: null },
+  };
+  window.dispatchEvent(new CustomEvent('t1:state', { detail: emptyDetail }));
 }
 
 function updateBadge(fips) {
@@ -135,8 +158,16 @@ function updateBadge(fips) {
 function updateHistory(fips, push) {
   try {
     const normalized = fips ? String(fips).slice(0, 2).padStart(2, '0') : null;
-    const share = typeof window !== 'undefined' ? window.__T1_SHARE__ : null;
     const statePayload = normalized ? { fips: normalized } : {};
+    const ctrl = typeof window !== 'undefined' ? window.__T1_CONTROLLER__ : null;
+    if (ctrl && typeof ctrl.setGeoSelection === 'function') {
+      ctrl.setGeoSelection(
+        { layer: 'state', stateFips: normalized, countyFips: null },
+        { push: !!push },
+      );
+      return true;
+    }
+    const share = typeof window !== 'undefined' ? window.__T1_SHARE__ : null;
     if (share && typeof share.setModel === 'function') {
       share.setModel({ state: { fips: normalized } });
       share.scheduleURLUpdate?.({
@@ -144,7 +175,7 @@ function updateHistory(fips, push) {
         state: statePayload,
         delay: push ? 0 : 150,
       });
-      return;
+      return false;
     }
     const url = new URL(location.href);
     if (normalized) {
@@ -159,7 +190,9 @@ function updateHistory(fips, push) {
     }
   } catch (err) {
     try { console.warn('map: permalink update failed', err); } catch (_e) {}
+    return false;
   }
+  return false;
 }
 
 let geoProjectionPromise = null;
@@ -167,6 +200,7 @@ let countiesPromise = null;
 let mapSize = { width: 960, height: 520 };
 
 function ensureGeography() {
+  if (!countyLayerEnabled) return Promise.resolve(null);
   if (geoProjectionPromise) return geoProjectionPromise;
   geoProjectionPromise = (async () => {
     try {
@@ -190,7 +224,7 @@ function ensureGeography() {
 }
 
 function highlightCounty(fips) {
-  if (!countyLayer) return;
+  if (!countyLayer || !countyLayerEnabled) return;
   if (selectedCountyFips) {
     const prev = countyElements.get(selectedCountyFips);
     if (prev) prev.classList.remove('county--selected');
@@ -203,7 +237,7 @@ function highlightCounty(fips) {
 }
 
 function setCountyVisibility(stateCode) {
-  if (!countyLayer) return;
+  if (!countyLayer || !countyLayerEnabled) return;
   countyElements.forEach((el) => {
     if (!stateCode || el.getAttribute('data-state') === stateCode) {
       el.setAttribute('data-visible', '1');
@@ -220,7 +254,7 @@ function setCountyVisibility(stateCode) {
 }
 
 function ensureCountyLayerLoaded() {
-  if (!countyLayer) return Promise.resolve();
+  if (!countyLayer || !countyLayerEnabled) return Promise.resolve();
   if (countiesReady) return Promise.resolve();
   if (countiesPromise) return countiesPromise;
   countiesPromise = (async () => {
@@ -267,8 +301,11 @@ function ensureCountyLayerLoaded() {
 }
 
 function syncCountyLayer() {
-  if (!countyLayer) return;
-  const active = localScopeActive && !!currentStateCode;
+  if (!countyLayer || !countyLayerEnabled) {
+    root.setAttribute('data-local-active', '0');
+    return;
+  }
+  const active = (localScopeActive || forceCountyMode) && !!currentStateCode;
   root.setAttribute('data-local-active', active ? '1' : '0');
   if (!active) {
     countyLayer.setAttribute('aria-hidden', 'true');
@@ -297,10 +334,11 @@ function clearSelection({ emit = true, push = false } = {}) {
   try {
     hadParam = new URL(location.href).searchParams.has('fips');
   } catch {}
+  let usedController = false;
   if (prevFips || hadParam) {
-    updateHistory(null, push);
+    usedController = suppressHistorySync ? false : updateHistory(null, push);
   }
-  if (emit) emitStateDetail(null);
+  if (emit && !usedController) emitStateDetail(null);
 }
 
 function selectState(fips, { emit = true, push = false } = {}) {
@@ -332,33 +370,65 @@ function selectState(fips, { emit = true, push = false } = {}) {
     if (group && next) group.appendChild(next);
   } catch (e) {}
 
-  updateHistory(fips, push);
+  const usedController = suppressHistorySync ? false : updateHistory(fips, push);
 
-  if (emit) emitStateDetail(fips);
+  if (emit && !usedController) emitStateDetail(fips);
 }
 
 // Apply selection from URL on load (or enforce a neutral state)
 (function applyInitialSelection() {
+  const ctrl = getController();
+  const ctrlGeo = ctrl && ctrl.geoSelection ? ctrl.geoSelection : null;
+  if (ctrlGeo) {
+    const layer = ctrlGeo.layer || 'state';
+    const stateFips = ctrlGeo.stateFips ? String(ctrlGeo.stateFips).padStart(2, '0') : null;
+    const countyFips = ctrlGeo.countyFips ? String(ctrlGeo.countyFips).padStart(5, '0') : null;
+    if (layer === 'county' && stateFips && countyLayerEnabled) {
+      forceCountyMode = true;
+      suppressHistorySync = true;
+      try {
+        selectState(stateFips, { emit: false, push: false });
+      } finally {
+        suppressHistorySync = false;
+      }
+      if (countyFips) {
+        ensureCountyLayerLoaded().then(() => {
+          highlightCounty(countyFips);
+        });
+      }
+      return;
+    }
+    if (stateFips) {
+      suppressHistorySync = true;
+      try {
+        selectState(stateFips, { emit: false, push: false });
+      } finally {
+        suppressHistorySync = false;
+      }
+      return;
+    }
+  }
   try {
     const url = new URL(location.href);
     const f = url.searchParams.get('fips');
     if (f) {
-      selectState(f, { emit: true, push: false });
+      selectState(f, { emit: !ctrl, push: false });
       return;
     }
   } catch (err) {
     try { console.warn('map: failed to read initial fips', err); } catch (e) {}
   }
-  clearSelection({ emit: true, push: false });
+  clearSelection({ emit: !ctrl, push: false });
 })();
 
 // React to back/forward navigation
 window.addEventListener('popstate', (e) => {
   const f = (e.state && e.state.fips) || (new URL(location.href)).searchParams.get('fips');
+  const ctrl = typeof window !== 'undefined' ? window.__T1_CONTROLLER__ : null;
   if (f) {
-    selectState(f, { emit: true, push: false });
+    selectState(f, { emit: !ctrl, push: false });
   } else {
-    clearSelection({ emit: true, push: false });
+    clearSelection({ emit: !ctrl, push: false });
   }
 });
 
@@ -648,6 +718,81 @@ window.addEventListener('popstate', (e) => {
       }
     });
 
+    window.addEventListener('t1:geo-selection', (event) => {
+      const detail = event.detail || {};
+      const layer = detail.layer || 'state';
+      const stateFips = detail.stateFips ? String(detail.stateFips).replace(/\D+/g, '').padStart(2, '0').slice(0, 2) : null;
+      const countyFips = detail.countyFips ? String(detail.countyFips).replace(/\D+/g, '').padStart(5, '0').slice(0, 5) : null;
+      if (layer === 'county' && stateFips) {
+        if (!countyLayerEnabled) {
+          if (!selectedFips || selectedFips !== stateFips) {
+            suppressHistorySync = true;
+            try {
+              selectState(stateFips, { emit: false, push: false });
+            } finally {
+              suppressHistorySync = false;
+            }
+          }
+          return;
+        }
+        forceCountyMode = true;
+        const needsSelect = !selectedFips || selectedFips !== stateFips;
+        if (needsSelect) {
+          suppressHistorySync = true;
+          try {
+            selectState(stateFips, { emit: false, push: false });
+          } finally {
+            suppressHistorySync = false;
+          }
+        } else {
+          currentStateCode = fipsToCode(stateFips) || currentStateCode;
+          syncCountyLayer();
+        }
+        if (countyFips) {
+          ensureCountyLayerLoaded().then(() => {
+            highlightCounty(countyFips);
+          });
+        } else {
+          highlightCounty(null);
+        }
+        syncCountyLayer();
+        return;
+      }
+      forceCountyMode = false;
+      if (layer === 'state') {
+        if (stateFips) {
+          if (!selectedFips || selectedFips !== stateFips) {
+            suppressHistorySync = true;
+            try {
+              selectState(stateFips, { emit: false, push: false });
+            } finally {
+              suppressHistorySync = false;
+            }
+          }
+        } else if (selectedFips) {
+          suppressHistorySync = true;
+          try {
+            clearSelection({ emit: false, push: false });
+          } finally {
+            suppressHistorySync = false;
+          }
+        }
+        highlightCounty(null);
+        syncCountyLayer();
+      }
+    });
+
+    window.addEventListener('t1:local-scope', (event) => {
+      const detail = event.detail || {};
+      if (typeof detail.enabled === 'boolean') {
+        localScopeActive = detail.enabled;
+        if (!localScopeActive && !forceCountyMode) {
+          highlightCounty(null);
+        }
+        syncCountyLayer();
+      }
+    });
+
     window.addEventListener('t1:scope-changed', (event) => {
       const detail = event.detail || {};
       if (typeof detail.local === 'boolean') {
@@ -657,6 +802,7 @@ window.addEventListener('popstate', (e) => {
     });
 
     window.addEventListener('t1:locality-changed', (event) => {
+      if (getController()) return;
       const detail = event.detail || {};
       const countyFips = detail.fipsCounty || detail.countyFips || detail.fips || null;
       const possibleState = detail.state ? String(detail.state).toUpperCase() : null;
@@ -681,23 +827,27 @@ window.addEventListener('popstate', (e) => {
     syncCountyLayer();
   }
 
+  const emitStateFallbackIfNeeded = () => {
+    if (typeof window === 'undefined') return;
+    const ctrl = window.__T1_CONTROLLER__;
+    if (ctrl && ctrl.geoSelection) return;
+    try {
+      const params = new URL(window.location.href).searchParams;
+      const f = params.get('fips');
+      if (f) {
+        emitStateDetail(f);
+      }
+    } catch (err) {}
+  };
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       initMapClient();
-      // If a `state` query param is present on load, broadcast it so other panels sync.
-      try {
-        const params = new URL(window.location.href).searchParams;
-const f = params.get('fips');
-if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: { fips: f, code: fipsToCode(f) || null } }));
-      } catch (err) {}
+      emitStateFallbackIfNeeded();
     });
   } else {
     initMapClient();
-    try {
-      const params = new URL(window.location.href).searchParams;
-const f = params.get('fips');
-if (f) window.dispatchEvent(new CustomEvent('t1:state', { detail: { fips: f, code: fipsToCode(f) || null } }));
-    } catch (err) {}
+    emitStateFallbackIfNeeded();
   }
 
 </script>

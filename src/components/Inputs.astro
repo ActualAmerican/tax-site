@@ -51,6 +51,7 @@ import InputsFederal from './InputsFederal.astro';
   const win = typeof window !== 'undefined' ? window : undefined;
   const shareCtrl = win && typeof win.__T1_SHARE__ === 'object' ? win.__T1_SHARE__ : null;
   const shareUtils = win && win.__T1_SHARE_UTILS__ ? win.__T1_SHARE_UTILS__ : null;
+  const controller = win && win.__T1_CONTROLLER__ ? win.__T1_CONTROLLER__ : null;
   const PACK_VERSION = (() => {
     if (!win) return null;
     if (shareCtrl && typeof shareCtrl.version === 'string' && shareCtrl.version) return shareCtrl.version;
@@ -85,6 +86,20 @@ import InputsFederal from './InputsFederal.astro';
     version: PACK_VERSION || null,
   });
 
+  const normalizeStateFipsValue = (value) => {
+    if (value == null) return null;
+    const digits = String(value).trim().replace(/\D+/g, '');
+    if (!digits) return null;
+    return digits.padStart(2, '0').slice(0, 2);
+  };
+
+  const normalizeCountyFipsValue = (value) => {
+    if (value == null) return null;
+    const digits = String(value).trim().replace(/\D+/g, '');
+    if (!digits) return null;
+    return digits.padStart(5, '0').slice(0, 5);
+  };
+
   function resolveShareModel() {
     try {
       if (shareCtrl && typeof shareCtrl.getModel === 'function') {
@@ -110,6 +125,43 @@ import InputsFederal from './InputsFederal.astro';
 
   let shareModel = resolveShareModel();
   if (win) win.__T1_SHARE_MODEL__ = shareModel;
+  let controllerLocalScope =
+    (controller && typeof controller.getLocalScope === 'function' && controller.getLocalScope()) ||
+    (controller && controller.localScope ? { ...controller.localScope } : null);
+  if (controllerLocalScope) {
+    controllerLocalScope = {
+      ...controllerLocalScope,
+      stateFips: normalizeStateFipsValue(controllerLocalScope.stateFips),
+      countyFips: normalizeCountyFipsValue(controllerLocalScope.countyFips),
+    };
+  }
+
+  const resolveLocalStateFips = (detail = {}) =>
+    normalizeStateFipsValue(detail.stateFips) ||
+    (controllerLocalScope && normalizeStateFipsValue(controllerLocalScope.stateFips)) ||
+    normalizeStateFipsValue(state.locality?.stateFips) ||
+    normalizeStateFipsValue(shareModel.state?.fips) ||
+    null;
+
+  const syncGeoSelectionFromLocal = (countyFips, stateFips, origin = 'inputs-locality') => {
+    if (!controller || typeof controller.setGeoSelection !== 'function') return;
+    const normalizedCounty = normalizeCountyFipsValue(countyFips);
+    if (normalizedCounty && scopeState.local) {
+      const normalizedState = normalizeStateFipsValue(stateFips);
+      if (!normalizedState) return;
+      controller.setGeoSelection(
+        { layer: 'county', stateFips: normalizedState, countyFips: normalizedCounty },
+        { origin, schedule: false },
+      );
+      return;
+    }
+    if (!normalizedCounty) {
+      controller.setGeoSelection(
+        { layer: 'state', countyFips: null },
+        { origin, schedule: false },
+      );
+    }
+  };
 
   const scopeState = { ...shareModel.scope };
   let lastFederalPreference = shareModel.inputs.includeFederal;
@@ -308,7 +360,10 @@ import InputsFederal from './InputsFederal.astro';
       local: {
         zip: localityDetail.zip ?? null,
         countyFips: localityDetail.fipsCounty ?? localityDetail.countyFips ?? null,
-        toggles: shareModel.local?.toggles ?? 0,
+        toggles:
+          (controllerLocalScope && typeof controllerLocalScope.toggles === 'number'
+            ? controllerLocalScope.toggles
+            : shareModel.local?.toggles ?? 0),
       },
     };
     shareModel = updateShareModel(patch);
@@ -478,6 +533,22 @@ import InputsFederal from './InputsFederal.astro';
     applyScopeVisibility();
     state.scopes = { ...scopeState };
     handleFederalTransition(prevFederal, scopeState.federal);
+    if (scope === 'local' && controller && typeof controller.setLocalScope === 'function') {
+      controllerLocalScope = controller.setLocalScope(
+        { enabled: value },
+        { emit: false, schedule: false, origin: 'inputs-scope' },
+      );
+      if (value && controllerLocalScope?.countyFips) {
+        syncGeoSelectionFromLocal(
+          controllerLocalScope.countyFips,
+          controllerLocalScope.stateFips || shareModel.state.fips,
+          'inputs-scope',
+        );
+      }
+      if (!value) {
+        syncGeoSelectionFromLocal(null, null, 'inputs-scope');
+      }
+    }
     if (opts.broadcast !== false) broadcastScope('inputs');
     if (opts.emit !== false) emit();
   }
@@ -547,14 +618,40 @@ import InputsFederal from './InputsFederal.astro';
     emit();
   });
 
+  window.addEventListener('t1:local-scope', (event) => {
+    const detail = event.detail || {};
+    if (detail) {
+      controllerLocalScope = {
+        ...(controllerLocalScope || {}),
+        ...detail,
+        stateFips: detail.stateFips !== undefined
+          ? normalizeStateFipsValue(detail.stateFips)
+          : controllerLocalScope?.stateFips || null,
+        countyFips: detail.countyFips !== undefined
+          ? normalizeCountyFipsValue(detail.countyFips)
+          : controllerLocalScope?.countyFips || null,
+      };
+    }
+    if (!shareModel.local) shareModel.local = { zip: null, countyFips: null, toggles: 0 };
+    if (detail.zip !== undefined) shareModel.local.zip = detail.zip;
+    if (detail.countyFips !== undefined) shareModel.local.countyFips = detail.countyFips;
+    if (typeof detail.toggles === 'number') shareModel.local.toggles = detail.toggles;
+  });
+
   window.addEventListener('t1:state', (event) => {
     const detail = event.detail || {};
     let code = null;
-    if (detail && detail.code) {
+    if (detail && detail.geoSelection && detail.geoSelection.stateFips) {
+      const dig = String(detail.geoSelection.stateFips).slice(0, 2).padStart(2, '0');
+      code = FIPS_TO_CODE[dig] || null;
+      state.locality.stateFips = detail.geoSelection.stateFips;
+    } else if (detail && detail.code) {
       code = String(detail.code).toUpperCase();
+      if (CODE_TO_FIPS[code]) state.locality.stateFips = CODE_TO_FIPS[code];
     } else if (detail && detail.fips) {
       const dig = String(detail.fips).padStart(2, '0').slice(0, 2);
       code = FIPS_TO_CODE[dig] || null;
+      state.locality.stateFips = dig;
     }
     const prevHasState = hasState;
     hasState = !!code;
@@ -585,16 +682,34 @@ import InputsFederal from './InputsFederal.astro';
 
   window.addEventListener('t1:locality-changed', (event) => {
     const detail = event.detail || {};
+    const normalizedCounty = normalizeCountyFipsValue(detail.fipsCounty || detail.countyFips || detail.fips || null);
+    const stateFipsForCounty = resolveLocalStateFips(detail);
     state.locality = {
       zip: detail.zip,
       city: detail.city,
       countyName: detail.countyName,
-      fipsCounty: detail.fipsCounty || detail.countyFips || detail.fips || null,
+      fipsCounty: normalizedCounty,
       state: detail.state || null,
-      stateFips: detail.stateFips || null,
+      stateFips: stateFipsForCounty,
       source: detail.source || null
     };
     emit();
+    if (controller && typeof controller.setLocalScope === 'function') {
+      controllerLocalScope = controller.setLocalScope(
+        {
+          zip: detail.zip ?? null,
+          city: detail.city ?? null,
+          countyFips: normalizedCounty,
+          stateFips: stateFipsForCounty,
+        },
+        { schedule: false, origin: detail.source || 'inputs-locality' },
+      );
+    }
+    syncGeoSelectionFromLocal(
+      normalizedCounty,
+      stateFipsForCounty,
+      detail.source || 'inputs-locality',
+    );
   });
 
   document.addEventListener('input', (ev) => {

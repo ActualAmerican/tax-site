@@ -7,6 +7,142 @@ import {
 
 const win = typeof window !== 'undefined' ? window : undefined;
 
+const FIPS_TO_STATE_CODE = {
+  '01': 'AL',
+  '02': 'AK',
+  '04': 'AZ',
+  '05': 'AR',
+  '06': 'CA',
+  '08': 'CO',
+  '09': 'CT',
+  '10': 'DE',
+  '11': 'DC',
+  '12': 'FL',
+  '13': 'GA',
+  '15': 'HI',
+  '16': 'ID',
+  '17': 'IL',
+  '18': 'IN',
+  '19': 'IA',
+  '20': 'KS',
+  '21': 'KY',
+  '22': 'LA',
+  '23': 'ME',
+  '24': 'MD',
+  '25': 'MA',
+  '26': 'MI',
+  '27': 'MN',
+  '28': 'MS',
+  '29': 'MO',
+  '30': 'MT',
+  '31': 'NE',
+  '32': 'NV',
+  '33': 'NH',
+  '34': 'NJ',
+  '35': 'NM',
+  '36': 'NY',
+  '37': 'NC',
+  '38': 'ND',
+  '39': 'OH',
+  '40': 'OK',
+  '41': 'OR',
+  '42': 'PA',
+  '44': 'RI',
+  '45': 'SC',
+  '46': 'SD',
+  '47': 'TN',
+  '48': 'TX',
+  '49': 'UT',
+  '50': 'VT',
+  '51': 'VA',
+  '53': 'WA',
+  '54': 'WV',
+  '55': 'WI',
+  '56': 'WY',
+  '72': 'PR',
+};
+
+const STATE_CODE_TO_FIPS = Object.fromEntries(
+  Object.entries(FIPS_TO_STATE_CODE).map(([fips, code]) => [code, fips]),
+);
+
+const LOCAL_CATEGORY_KEYS = ['local-income', 'local-sales', 'lodging', 'car-rental', 'prepared-foods', 'parking'];
+const LOCAL_CATEGORY_DEFAULTS = {
+  'local-income': true,
+  'local-sales': true,
+  lodging: false,
+  'car-rental': false,
+  'prepared-foods': false,
+  parking: false,
+};
+
+const createCategoryState = (mask = 0) => {
+  const categories = { ...LOCAL_CATEGORY_DEFAULTS };
+  if (typeof mask === 'number' && Number.isFinite(mask)) {
+    LOCAL_CATEGORY_KEYS.forEach((key, idx) => {
+      categories[key] = (mask & (1 << idx)) === (1 << idx);
+    });
+  }
+  return categories;
+};
+
+const mergeCategories = (base = LOCAL_CATEGORY_DEFAULTS, patch = {}) => {
+  let mutated = false;
+  const next = { ...base };
+  if (patch && typeof patch === 'object') {
+    LOCAL_CATEGORY_KEYS.forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(patch, key)) {
+        const desired = !!patch[key];
+        if (next[key] !== desired) {
+          next[key] = desired;
+          mutated = true;
+        }
+      }
+    });
+  }
+  return mutated ? next : base;
+};
+
+const encodeCategories = (categories = LOCAL_CATEGORY_DEFAULTS) => {
+  let mask = 0;
+  LOCAL_CATEGORY_KEYS.forEach((key, idx) => {
+    const active = Object.prototype.hasOwnProperty.call(categories, key) ? !!categories[key] : LOCAL_CATEGORY_DEFAULTS[key];
+    if (active) mask |= 1 << idx;
+  });
+  return mask;
+};
+
+const normalizeStateFips = (value) => {
+  if (value == null) return null;
+  const digits = String(value).trim().replace(/\D+/g, '');
+  if (!digits) return null;
+  const normalized = digits.padStart(2, '0').slice(0, 2);
+  return normalized === '00' ? null : normalized;
+};
+
+const normalizeCountyFips = (value) => {
+  if (value == null) return null;
+  const digits = String(value).trim().replace(/\D+/g, '');
+  if (!digits) return null;
+  if (digits.length >= 5) return digits.slice(0, 5);
+  if (digits.length <= 2) return digits.padStart(5, '0');
+  return digits.padStart(5, '0');
+};
+
+const normalizeZip = (value) => {
+  if (value == null) return null;
+  const digits = String(value).trim().replace(/\D+/g, '');
+  if (!digits) return null;
+  if (digits.length >= 5) return digits.slice(0, 5);
+  return digits.padStart(5, '0');
+};
+
+const normalizeCity = (value) => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+};
+
 if (win) {
   const runSoon =
     typeof queueMicrotask === 'function'
@@ -43,7 +179,149 @@ if (win) {
   let model = win.__T1_SHARE_MODEL__ || decodeCurrentLocation();
   win.__T1_SHARE_MODEL__ = model;
 
+  let geoSelection = {
+    layer: 'state',
+    stateFips: normalizeStateFips(model?.state?.fips),
+    countyFips: normalizeCountyFips(model?.local?.countyFips),
+  };
+  const initialLocalToggles = typeof model?.local?.toggles === 'number' ? model.local.toggles : 0;
+  let localScope = {
+    enabled: !!(model?.scope?.local),
+    zip: normalizeZip(model?.local?.zip),
+    city: normalizeCity(model?.local?.city),
+    countyFips: normalizeCountyFips(model?.local?.countyFips),
+    stateFips: normalizeStateFips(model?.state?.fips),
+    categories: createCategoryState(initialLocalToggles),
+    toggles: initialLocalToggles,
+  };
+  let controller = null;
+
   let timer = 0;
+
+  const updateGeoSelectionState = (patch = {}) => {
+    const nextLayer = patch.layer === 'county' ? 'county' : 'state';
+    const hasStateCode = Object.prototype.hasOwnProperty.call(patch, 'stateCode');
+    let nextState = geoSelection.stateFips;
+    if (patch.stateFips !== undefined) {
+      nextState = normalizeStateFips(patch.stateFips);
+    } else if (hasStateCode) {
+      const code = String(patch.stateCode || '').toUpperCase();
+      nextState = STATE_CODE_TO_FIPS[code] || null;
+    }
+    const nextCounty =
+      patch.countyFips === undefined ? geoSelection.countyFips : normalizeCountyFips(patch.countyFips);
+    const changed =
+      nextLayer !== geoSelection.layer ||
+      nextState !== geoSelection.stateFips ||
+      nextCounty !== geoSelection.countyFips;
+    if (changed) {
+      geoSelection = { layer: nextLayer, stateFips: nextState, countyFips: nextCounty };
+      if (controller) controller.geoSelection = { ...geoSelection };
+    }
+    return changed;
+  };
+
+  const updateLocalScopeState = (patch = {}) => {
+    const hasCity = Object.prototype.hasOwnProperty.call(patch, 'city');
+    const hasZip = Object.prototype.hasOwnProperty.call(patch, 'zip');
+    const hasEnabled = Object.prototype.hasOwnProperty.call(patch, 'enabled');
+    const hasCounty = Object.prototype.hasOwnProperty.call(patch, 'countyFips');
+    const hasStateField = Object.prototype.hasOwnProperty.call(patch, 'stateFips');
+    const hasCategories = Object.prototype.hasOwnProperty.call(patch, 'categories');
+    const hasToggles = Object.prototype.hasOwnProperty.call(patch, 'toggles');
+    const next = {
+      enabled: hasEnabled ? !!patch.enabled : localScope.enabled,
+      zip: hasZip ? normalizeZip(patch.zip) : localScope.zip,
+      city: hasCity ? normalizeCity(patch.city) : localScope.city,
+      countyFips: hasCounty ? normalizeCountyFips(patch.countyFips) : localScope.countyFips,
+      stateFips: hasStateField ? normalizeStateFips(patch.stateFips) : localScope.stateFips,
+      categories: hasCategories ? mergeCategories(localScope.categories, patch.categories) : localScope.categories,
+      toggles: localScope.toggles,
+    };
+    next.toggles = hasToggles
+      ? Math.max(0, Number(patch.toggles) || 0)
+      : encodeCategories(next.categories);
+    const changed =
+      next.enabled !== localScope.enabled ||
+      next.zip !== localScope.zip ||
+      next.city !== localScope.city ||
+      next.countyFips !== localScope.countyFips ||
+      next.stateFips !== localScope.stateFips ||
+      next.toggles !== localScope.toggles ||
+      next.categories !== localScope.categories;
+    if (changed) {
+      localScope = next;
+      if (controller) controller.localScope = { ...localScope };
+    }
+    return changed;
+  };
+
+  const emitGeoSelection = (origin = 'controller') => {
+    const stateDetail =
+      geoSelection.stateFips && geoSelection.layer === 'state'
+        ? {
+            fips: geoSelection.stateFips,
+            code: FIPS_TO_STATE_CODE[geoSelection.stateFips] || null,
+            geoSelection: { ...geoSelection },
+            __origin: origin,
+          }
+        : {
+            geoSelection: { ...geoSelection },
+            __origin: origin,
+          };
+    try {
+      win.dispatchEvent(
+        new CustomEvent('t1:geo-selection', {
+          detail: { ...geoSelection, __origin: origin },
+        }),
+      );
+    } catch (_) {}
+    try {
+      win.dispatchEvent(new CustomEvent('t1:state', { detail: stateDetail }));
+    } catch (_) {}
+  };
+
+  const emitLocalScope = (origin = 'controller') => {
+    try {
+      win.dispatchEvent(
+        new CustomEvent('t1:local-scope', {
+          detail: { ...localScope, __origin: origin },
+        }),
+      );
+    } catch (_) {}
+  };
+
+  const syncControllerFromModel = ({ emitGeo = false, emitLocal = false, origin = 'permalink' } = {}) => {
+    const geoChanged = updateGeoSelectionState({
+      layer: 'state',
+      stateFips: model?.state?.fips || null,
+      countyFips: model?.local?.countyFips || null,
+    });
+    const localChanged = updateLocalScopeState({
+      enabled: !!(model?.scope?.local),
+      zip: model?.local?.zip || null,
+      countyFips: model?.local?.countyFips || null,
+      stateFips: model?.state?.fips || null,
+      categories: createCategoryState(typeof model?.local?.toggles === 'number' ? model.local.toggles : 0),
+    });
+    if (geoChanged && emitGeo) emitGeoSelection(origin);
+    if (localChanged && emitLocal) emitLocalScope(origin);
+    const shouldUseCounty = localScope.enabled && localScope.countyFips;
+    if (shouldUseCounty) {
+      const fallbackState = localScope.stateFips || model?.state?.fips || geoSelection.stateFips;
+      if (fallbackState) {
+        const promoted = updateGeoSelectionState({
+          layer: 'county',
+          stateFips: fallbackState,
+          countyFips: localScope.countyFips,
+        });
+        if (promoted && emitGeo) emitGeoSelection(origin);
+      }
+    } else if (!shouldUseCounty && geoSelection.layer === 'county') {
+      const reverted = updateGeoSelectionState({ layer: 'state', countyFips: null });
+      if (reverted && emitGeo) emitGeoSelection(origin);
+    }
+  };
 
   const encodeCurrent = () =>
     encodeShare(model, {
@@ -89,6 +367,7 @@ if (win) {
     try {
       model = mergeModel(model, patch, { packVersion: PACK_VERSION || undefined });
       win.__T1_SHARE_MODEL__ = model;
+      syncControllerFromModel({ emitGeo: false, emitLocal: false, origin: 'permalink-model' });
     } catch (err) {
       try {
         console.warn('permalink: merge failed', err);
@@ -97,13 +376,89 @@ if (win) {
     return model;
   };
 
+  const controllerApi = {
+    geoSelection: { ...geoSelection },
+    localScope: { ...localScope },
+    getGeoSelection: () => ({ ...geoSelection }),
+    setGeoSelection: (patch = {}, opts = {}) => {
+      const changed = updateGeoSelectionState(patch);
+      const sharePatch = {};
+      const stateProvided =
+        Object.prototype.hasOwnProperty.call(patch, 'stateFips') ||
+        Object.prototype.hasOwnProperty.call(patch, 'stateCode');
+      const countyProvided = Object.prototype.hasOwnProperty.call(patch, 'countyFips');
+      if (stateProvided) {
+        sharePatch.state = {
+          fips: geoSelection.stateFips,
+          code: geoSelection.stateFips ? FIPS_TO_STATE_CODE[geoSelection.stateFips] || null : null,
+        };
+      }
+      if (countyProvided) {
+        sharePatch.local = { countyFips: geoSelection.countyFips };
+      }
+      const shareChanged = Object.keys(sharePatch).length > 0;
+      if (shareChanged) {
+        setModel(sharePatch);
+      }
+      const statePayload =
+        geoSelection.stateFips && geoSelection.layer === 'state' ? { fips: geoSelection.stateFips } : {};
+      if ((changed || stateProvided || shareChanged) && opts.schedule !== false) {
+        scheduleURLUpdate({
+          push: !!opts.push,
+          state: statePayload,
+          delay: typeof opts.delay === 'number' ? opts.delay : 150,
+        });
+      }
+      if (changed && opts.emit !== false) {
+        emitGeoSelection(opts.origin || 'controller');
+      }
+      return { ...geoSelection };
+    },
+    getLocalScope: () => ({ ...localScope }),
+    setLocalScope: (patch = {}, opts = {}) => {
+      const changed = updateLocalScopeState(patch);
+      if (!changed) return { ...localScope };
+      const sharePatch = {};
+      const localPatch = {};
+      if (Object.prototype.hasOwnProperty.call(patch, 'zip')) {
+        localPatch.zip = localScope.zip;
+      }
+      if (Object.prototype.hasOwnProperty.call(patch, 'countyFips')) {
+        localPatch.countyFips = localScope.countyFips;
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(patch, 'categories') ||
+        Object.prototype.hasOwnProperty.call(patch, 'toggles')
+      ) {
+        localPatch.toggles = localScope.toggles;
+      }
+      if (Object.keys(localPatch).length) {
+        sharePatch.local = localPatch;
+      }
+      if (Object.prototype.hasOwnProperty.call(patch, 'enabled')) {
+        sharePatch.scope = { local: localScope.enabled };
+      }
+      if (Object.keys(sharePatch).length) {
+        setModel(sharePatch);
+        if (opts.schedule !== false) {
+          scheduleURLUpdate({ delay: typeof opts.delay === 'number' ? opts.delay : 150 });
+        }
+      }
+      if (opts.emit !== false) {
+        emitLocalScope(opts.origin || 'controller');
+      }
+      return { ...localScope };
+    },
+  };
+
+  controller = controllerApi;
+  win.__T1_CONTROLLER__ = controller;
+  syncControllerFromModel({ emitGeo: false, emitLocal: false, origin: 'permalink-init' });
+
   const broadcast = (origin = 'permalink') => {
     try {
-      const stateDetail =
-        model.state && model.state.fips
-          ? { fips: model.state.fips, code: model.state.code || null }
-          : null;
-      win.dispatchEvent(new CustomEvent('t1:state', { detail: stateDetail }));
+      emitGeoSelection(origin);
+      emitLocalScope(origin);
       win.dispatchEvent(
         new CustomEvent('t1:scope-changed', {
           detail: { ...model.scope, __origin: origin },
@@ -167,6 +522,7 @@ if (win) {
     try {
       model = decodeCurrentLocation();
       win.__T1_SHARE_MODEL__ = model;
+      syncControllerFromModel({ emitGeo: false, emitLocal: false, origin: 'permalink-popstate' });
       runSoon(() => broadcast('permalink-popstate'));
     } catch (err) {
       try {

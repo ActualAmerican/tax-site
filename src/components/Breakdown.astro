@@ -186,6 +186,11 @@ const compareHref = hasInitial ? `/compare?a=${initialCode}` : '#';
   function normalizeStateCode(input) {
     if (!input) return null;
     if (typeof input === 'object') {
+      if (input.geoSelection) {
+        return normalizeStateCode(
+          input.geoSelection.stateFips || input.geoSelection.stateCode || null,
+        );
+      }
       if (input.code) return normalizeStateCode(input.code);
       if (input.fips) return normalizeStateCode(input.fips);
     }

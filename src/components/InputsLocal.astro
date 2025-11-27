@@ -29,6 +29,63 @@
     const root = script.previousElementSibling;
     if (!root || !root.matches('.inputs-local')) return;
     const note = root.querySelector('[data-local-note]');
+    const controller = typeof window !== 'undefined' ? window.__T1_CONTROLLER__ : null;
+    const categoryButtons = Array.from(root.querySelectorAll('button[data-cat]'));
+    const CATEGORY_KEYS = categoryButtons
+      .map((btn) => btn.getAttribute('data-cat'))
+      .filter((key) => typeof key === 'string' && key.length > 0);
+
+    const readCategories = () => {
+      const result = {};
+      categoryButtons.forEach((btn) => {
+        const key = btn.getAttribute('data-cat');
+        if (!key) return;
+        result[key] = btn.getAttribute('aria-pressed') === 'true';
+      });
+      return result;
+    };
+
+    const applyCategories = (categories) => {
+      if (!categories) return;
+      categoryButtons.forEach((btn) => {
+        const key = btn.getAttribute('data-cat');
+        if (!key || !Object.prototype.hasOwnProperty.call(categories, key)) return;
+        const next = !!categories[key];
+        btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+        btn.classList.toggle('is-active', next);
+      });
+    };
+
+    const encodeCategories = (categories) => {
+      let mask = 0;
+      CATEGORY_KEYS.forEach((key, idx) => {
+        if (categories && categories[key]) {
+          mask |= 1 << idx;
+        }
+      });
+      return mask;
+    };
+
+    const emitLocalScopeFallback = (categories) => {
+      const toggles = encodeCategories(categories);
+      window.dispatchEvent(
+        new CustomEvent('t1:local-scope', {
+          detail: {
+            categories,
+            toggles,
+            __origin: 'inputs-local-fallback',
+          },
+        }),
+      );
+    };
+
+    const persistCategories = (categories) => {
+      if (controller && typeof controller.setLocalScope === 'function') {
+        controller.setLocalScope({ categories }, { origin: 'inputs-local' });
+        return;
+      }
+      emitLocalScopeFallback(categories);
+    };
 
     root.addEventListener('click', (event) => {
       const btn = event.target.closest('button[data-cat]');
@@ -36,6 +93,8 @@
       const next = btn.getAttribute('aria-pressed') !== 'true';
       btn.setAttribute('aria-pressed', next ? 'true' : 'false');
       btn.classList.toggle('is-active', next);
+      const categories = readCategories();
+      persistCategories(categories);
     });
 
     function updateNote(code) {
@@ -50,5 +109,18 @@
       const detail = event.detail || {};
       updateNote(detail.code || null);
     });
+
+    window.addEventListener('t1:local-scope', (event) => {
+      const detail = event.detail || {};
+      if (!detail || !detail.categories) return;
+      applyCategories(detail.categories);
+    });
+
+    const initialScope =
+      (controller && typeof controller.getLocalScope === 'function' && controller.getLocalScope()) ||
+      (controller && controller.localScope ? controller.localScope : null);
+    if (initialScope && initialScope.categories) {
+      applyCategories(initialScope.categories);
+    }
   })();
 </script>
