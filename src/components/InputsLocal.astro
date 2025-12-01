@@ -1,24 +1,5 @@
 <div class="inputs-local stack">
-  <div class="inputs-local__group" role="group" aria-label="Local tax categories">
-    <button type="button" data-cat="local-income" aria-pressed="true" class="scope-chip scope-chip--local">
-      Local income
-    </button>
-    <button type="button" data-cat="local-sales" aria-pressed="true" class="scope-chip scope-chip--local">
-      Local sales
-    </button>
-    <button type="button" data-cat="lodging" aria-pressed="false" class="scope-chip scope-chip--local">
-      Lodging &amp; short-term stay
-    </button>
-    <button type="button" data-cat="car-rental" aria-pressed="false" class="scope-chip scope-chip--local">
-      Car rental
-    </button>
-    <button type="button" data-cat="prepared-foods" aria-pressed="false" class="scope-chip scope-chip--local">
-      Prepared foods
-    </button>
-    <button type="button" data-cat="parking" aria-pressed="false" class="scope-chip scope-chip--local">
-      Parking &amp; admissions
-    </button>
-  </div>
+  <div class="inputs-local__group" role="group" aria-label="Local tax categories" data-local-chip-container></div>
   <p class="muted-note" data-local-note>Select a state to load county-specific options. Local toggles are available while we wire the math.</p>
 </div>
 
@@ -29,72 +10,149 @@
     const root = script.previousElementSibling;
     if (!root || !root.matches('.inputs-local')) return;
     const note = root.querySelector('[data-local-note]');
-    const controller = typeof window !== 'undefined' ? window.__T1_CONTROLLER__ : null;
-    const categoryButtons = Array.from(root.querySelectorAll('button[data-cat]'));
-    const CATEGORY_KEYS = categoryButtons
-      .map((btn) => btn.getAttribute('data-cat'))
-      .filter((key) => typeof key === 'string' && key.length > 0);
+    const chipsContainer = root.querySelector('[data-local-chip-container]');
+    if (!chipsContainer) return;
 
-    const readCategories = () => {
-      const result = {};
-      categoryButtons.forEach((btn) => {
-        const key = btn.getAttribute('data-cat');
-        if (!key) return;
-        result[key] = btn.getAttribute('aria-pressed') === 'true';
+    const DEFAULT_CATEGORIES = [
+      { id: 'local-income', label: 'Local income', visible: true, defaultEnabled: true },
+      { id: 'local-sales', label: 'Local sales', visible: true, defaultEnabled: true },
+      { id: 'lodging', label: 'Lodging & short-term stay', visible: true, defaultEnabled: false },
+      { id: 'car-rental', label: 'Car rental', visible: true, defaultEnabled: false },
+      { id: 'prepared-foods', label: 'Prepared foods', visible: true, defaultEnabled: false },
+      { id: 'parking', label: 'Parking & admissions', visible: true, defaultEnabled: false },
+    ];
+    const CATEGORY_ORDER = DEFAULT_CATEGORIES.map((cat) => cat.id);
+    const DEFAULT_CATEGORY_MAP = Object.fromEntries(DEFAULT_CATEGORIES.map((cat) => [cat.id, cat]));
+
+    const getController = () => (typeof window !== 'undefined' ? window.__T1_CONTROLLER__ || null : null);
+
+    let activeCategories = cloneCategories(DEFAULT_CATEGORIES);
+    let categoryState = {};
+
+    function cloneCategories(list) {
+      return list.map((cat) => ({ ...cat }));
+    }
+
+    function sanitizeCategories(entries) {
+      if (!Array.isArray(entries) || !entries.length) return cloneCategories(DEFAULT_CATEGORIES);
+      const result = [];
+      entries.forEach((entry) => {
+        if (!entry || !entry.id) return;
+        const base = DEFAULT_CATEGORY_MAP[entry.id] || null;
+        const label = entry.label || base?.label || entry.id;
+        const visible = entry.visible === undefined ? base?.visible !== false : entry.visible !== false;
+        const defaultEnabled =
+          typeof entry.defaultEnabled === 'boolean'
+            ? entry.defaultEnabled
+            : base?.defaultEnabled ?? false;
+        result.push({ id: entry.id, label, visible, defaultEnabled });
       });
-      return result;
-    };
+      return result.length ? result : cloneCategories(DEFAULT_CATEGORIES);
+    }
 
-    const applyCategories = (categories) => {
-      if (!categories) return;
-      categoryButtons.forEach((btn) => {
-        const key = btn.getAttribute('data-cat');
-        if (!key || !Object.prototype.hasOwnProperty.call(categories, key)) return;
-        const next = !!categories[key];
-        btn.setAttribute('aria-pressed', next ? 'true' : 'false');
-        btn.classList.toggle('is-active', next);
-      });
-    };
-
-    const encodeCategories = (categories) => {
-      let mask = 0;
-      CATEGORY_KEYS.forEach((key, idx) => {
-        if (categories && categories[key]) {
-          mask |= 1 << idx;
+    function filterStateForActiveCategories(source = {}) {
+      const state = {};
+      activeCategories.forEach((cat) => {
+        if (cat.visible === false) return;
+        const value = source[cat.id];
+        if (typeof value === 'boolean') {
+          state[cat.id] = value;
+        } else {
+          state[cat.id] = !!cat.defaultEnabled;
         }
       });
-      return mask;
-    };
+      return state;
+    }
 
-    const emitLocalScopeFallback = (categories) => {
-      const toggles = encodeCategories(categories);
+    function deriveStateFromController() {
+      const ctrl = getController();
+      const stored = ctrl && typeof ctrl.getLocalScope === 'function' ? ctrl.getLocalScope()?.categories || {} : {};
+      return filterStateForActiveCategories(stored);
+    }
+
+    function encodeMask(state) {
+      let mask = 0;
+      CATEGORY_ORDER.forEach((key, idx) => {
+        if (state[key]) mask |= 1 << idx;
+      });
+      return mask;
+    }
+
+    function emitLocalScopeFallback(state) {
       window.dispatchEvent(
         new CustomEvent('t1:local-scope', {
           detail: {
-            categories,
-            toggles,
+            categories: { ...state },
+            toggles: encodeMask(state),
             __origin: 'inputs-local-fallback',
           },
         }),
       );
-    };
+    }
 
-    const persistCategories = (categories) => {
-      if (controller && typeof controller.setLocalScope === 'function') {
-        controller.setLocalScope({ categories }, { origin: 'inputs-local' });
+    function persistCategories(state, origin = 'inputs-local') {
+      const ctrl = getController();
+      if (ctrl && typeof ctrl.setLocalScope === 'function') {
+        ctrl.setLocalScope({ categories: { ...state }, toggles: encodeMask(state) }, { origin, schedule: false });
         return;
       }
-      emitLocalScopeFallback(categories);
-    };
+      emitLocalScopeFallback(state);
+    }
 
-    root.addEventListener('click', (event) => {
+    function renderCategories() {
+      chipsContainer.innerHTML = '';
+      const visibleCats = activeCategories.filter((cat) => cat.visible !== false);
+      if (!visibleCats.length) {
+        const message = document.createElement('p');
+        message.className = 'muted-note';
+        message.textContent = 'Local toggles are unavailable for this jurisdiction.';
+        chipsContainer.appendChild(message);
+        return;
+      }
+      visibleCats.forEach((cat) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'scope-chip scope-chip--local';
+        btn.setAttribute('data-cat', cat.id);
+        btn.textContent = cat.label;
+        const isActive = !!categoryState[cat.id];
+        setButtonState(btn, isActive);
+        chipsContainer.appendChild(btn);
+      });
+    }
+
+    function setButtonState(btn, isActive) {
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      if (isActive) btn.classList.add('is-active');
+      else btn.classList.remove('is-active');
+    }
+
+    function updateButtonsFromState(state) {
+      chipsContainer.querySelectorAll('button[data-cat]').forEach((btn) => {
+        const id = btn.getAttribute('data-cat');
+        if (!id || !Object.prototype.hasOwnProperty.call(state, id)) return;
+        setButtonState(btn, !!state[id]);
+      });
+    }
+
+    function applyProfile(profile) {
+      const normalized = sanitizeCategories(profile?.local?.categories);
+      activeCategories = normalized;
+      categoryState = deriveStateFromController();
+      renderCategories();
+      updateButtonsFromState(categoryState);
+      persistCategories(categoryState, 'inputs-local-profile');
+    }
+
+    chipsContainer.addEventListener('click', (event) => {
       const btn = event.target.closest('button[data-cat]');
       if (!btn) return;
+      const id = btn.getAttribute('data-cat');
+      if (!id || !Object.prototype.hasOwnProperty.call(categoryState, id)) return;
       const next = btn.getAttribute('aria-pressed') !== 'true';
-      btn.setAttribute('aria-pressed', next ? 'true' : 'false');
-      btn.classList.toggle('is-active', next);
-      const categories = readCategories();
-      persistCategories(categories);
+      setButtonState(btn, next);
+      categoryState[id] = next;
+      persistCategories(categoryState);
     });
 
     function updateNote(code) {
@@ -113,14 +171,19 @@
     window.addEventListener('t1:local-scope', (event) => {
       const detail = event.detail || {};
       if (!detail || !detail.categories) return;
-      applyCategories(detail.categories);
+      categoryState = filterStateForActiveCategories(detail.categories);
+      updateButtonsFromState(categoryState);
     });
 
-    const initialScope =
-      (controller && typeof controller.getLocalScope === 'function' && controller.getLocalScope()) ||
-      (controller && controller.localScope ? controller.localScope : null);
-    if (initialScope && initialScope.categories) {
-      applyCategories(initialScope.categories);
-    }
+    window.addEventListener('t1:scope-profile', (event) => {
+      applyProfile(event.detail || { local: { categories: DEFAULT_CATEGORIES } });
+    });
+
+    const initialController = getController();
+    const initialProfile =
+      initialController && typeof initialController.getScopeProfile === 'function'
+        ? initialController.getScopeProfile()
+        : null;
+    applyProfile(initialProfile || { local: { categories: DEFAULT_CATEGORIES } });
   })();
 </script>

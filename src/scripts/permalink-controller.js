@@ -76,6 +76,40 @@ const LOCAL_CATEGORY_DEFAULTS = {
   parking: false,
 };
 
+const DEFAULT_SCOPE_PROFILE = {
+  stateFips: null,
+  countyFips: null,
+  local: {
+    categories: [
+      { id: 'local-income', label: 'Local income', visible: true, defaultEnabled: true },
+      { id: 'local-sales', label: 'Local sales', visible: true, defaultEnabled: true },
+      { id: 'lodging', label: 'Lodging & short-term stay', visible: true, defaultEnabled: false },
+      { id: 'car-rental', label: 'Car rental', visible: true, defaultEnabled: false },
+      { id: 'prepared-foods', label: 'Prepared foods', visible: true, defaultEnabled: false },
+      { id: 'parking', label: 'Parking & admissions', visible: true, defaultEnabled: false },
+    ],
+  },
+  state: { categories: [] },
+  federal: { categories: [] },
+};
+
+const resolveTaxScopeProfile = (opts = {}) => {
+  const normalizeFips = (val, width) => {
+    if (val == null) return null;
+    const digits = String(val).trim().replace(/\D+/g, '');
+    if (!digits) return null;
+    return digits.padStart(width, '0').slice(0, width);
+  };
+  const stateFips = normalizeFips(opts.stateFips, 2);
+  const countyFips = normalizeFips(opts.countyFips, 5);
+  return {
+    ...DEFAULT_SCOPE_PROFILE,
+    stateFips,
+    countyFips,
+    local: { categories: DEFAULT_SCOPE_PROFILE.local.categories },
+  };
+};
+
 const createCategoryState = (mask = 0) => {
   const categories = { ...LOCAL_CATEGORY_DEFAULTS };
   if (typeof mask === 'number' && Number.isFinite(mask)) {
@@ -144,6 +178,11 @@ const normalizeCity = (value) => {
 };
 
 if (win) {
+  const log = (...args) => {
+    try {
+      console.log('[permalink-controller]', ...args);
+    } catch (_) {}
+  };
   const runSoon =
     typeof queueMicrotask === 'function'
       ? queueMicrotask.bind(win)
@@ -194,6 +233,10 @@ if (win) {
     categories: createCategoryState(initialLocalToggles),
     toggles: initialLocalToggles,
   };
+  let scopeProfile = resolveTaxScopeProfile({
+    stateFips: geoSelection.stateFips,
+    countyFips: geoSelection.countyFips || localScope.countyFips,
+  });
   let controller = null;
 
   let timer = 0;
@@ -291,6 +334,16 @@ if (win) {
     } catch (_) {}
   };
 
+  const emitScopeProfile = (origin = 'controller') => {
+    try {
+      win.dispatchEvent(
+        new CustomEvent('t1:scope-profile', {
+          detail: { ...scopeProfile, __origin: origin },
+        }),
+      );
+    } catch (_) {}
+  };
+
   const syncControllerFromModel = ({ emitGeo = false, emitLocal = false, origin = 'permalink' } = {}) => {
     const geoChanged = updateGeoSelectionState({
       layer: 'state',
@@ -321,6 +374,12 @@ if (win) {
       const reverted = updateGeoSelectionState({ layer: 'state', countyFips: null });
       if (reverted && emitGeo) emitGeoSelection(origin);
     }
+    const nextProfile = resolveTaxScopeProfile({
+      stateFips: geoSelection.stateFips || localScope.stateFips,
+      countyFips: geoSelection.countyFips || localScope.countyFips,
+    });
+    scopeProfile = nextProfile;
+    if (emitLocal || emitGeo) emitScopeProfile(origin);
   };
 
   const encodeCurrent = () =>
@@ -415,6 +474,7 @@ if (win) {
       return { ...geoSelection };
     },
     getLocalScope: () => ({ ...localScope }),
+    getScopeProfile: () => ({ ...scopeProfile, local: { categories: [...scopeProfile.local.categories] } }),
     setLocalScope: (patch = {}, opts = {}) => {
       const changed = updateLocalScopeState(patch);
       if (!changed) return { ...localScope };
@@ -452,7 +512,10 @@ if (win) {
   };
 
   controller = controllerApi;
-  win.__T1_CONTROLLER__ = controller;
+  try {
+    win.__T1_CONTROLLER__ = controller;
+    log('controller attached');
+  } catch (_) {}
   syncControllerFromModel({ emitGeo: false, emitLocal: false, origin: 'permalink-init' });
 
   const broadcast = (origin = 'permalink') => {
