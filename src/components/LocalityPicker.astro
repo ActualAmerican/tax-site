@@ -46,10 +46,10 @@
 
 <script type="module">
   (function initLocalityPicker() {
-    const script = document.currentScript;
-    if (!script) return;
-    const root = script.previousElementSibling;
-    if (!root || !root.matches('.locality-picker')) return;
+  if (typeof window === 'undefined') return;
+
+  const root = document.querySelector('.locality-picker');
+  if (!root) return;
 
     const FALLBACK_COUNTY_DIRECTORY = {
       CA: [
@@ -130,16 +130,28 @@
     };
 
     const resolveStateCode = ({ code, stateFips, fips }) => {
-      if (code) {
-        const norm = String(code).trim().toUpperCase();
-        return norm || null;
-      }
-      const digits = stateFips || fips;
-      if (digits) {
-        const normalized = normalizeStateFips(digits);
-        return normalized ? STATE_FIPS_MAP[normalized] || null : null;
-      }
-      return null;
+      const normalizedCode = normalizeStateCode(code);
+      const looksLikeFips = normalizedCode ? /^[0-9]{1,2}$/.test(normalizedCode) : false;
+      if (normalizedCode && !looksLikeFips) return normalizedCode;
+      const digits = looksLikeFips ? normalizedCode : stateFips || fips;
+      if (!digits) return null;
+      const normalized = normalizeStateFips(digits);
+      return normalized ? STATE_FIPS_MAP[normalized] || null : null;
+    };
+
+    const readActiveStateCode = () => {
+      const win = typeof window !== 'undefined' ? window : undefined;
+      const controller = win && win.__T1_CONTROLLER__ ? win.__T1_CONTROLLER__ : null;
+      const geo =
+        (controller && typeof controller.getGeoSelection === 'function' && controller.getGeoSelection()) ||
+        controller?.geoSelection ||
+        null;
+      const shared = win && win.__T1_SHARE_MODEL__ ? win.__T1_SHARE_MODEL__ : null;
+      return (
+        resolveStateCode({ code: geo?.code || geo?.stateCode, stateFips: geo?.stateFips }) ||
+        resolveStateCode({ code: shared?.state?.code, stateFips: shared?.state?.fips }) ||
+        null
+      );
     };
 
     const loadCountyDirectory = async () => {
@@ -280,18 +292,48 @@
       });
     }
 
+    // Debug helper to surface state in console during wiring
+    const attachDebug = () => {
+      if (typeof window === 'undefined') return;
+      const dbg = window.__T1_LOCALITY_DEBUG__ || {};
+      dbg.getRoot = () => root;
+      dbg.getState = () => currentState;
+      dbg.forceState = (code) => {
+        const resolved = resolveStateCode({ code });
+        if (!resolved) return null;
+        const stateChanged = resolved !== currentState;
+        currentState = resolved;
+        lastStateCode = resolved;
+        renderCountyOptions(resolved, countySelect?.value || countyInput?.value || undefined, { stateChanged: true });
+        return currentState;
+      };
+      dbg.forceRender = (code, preferredFips) => {
+        const resolved = resolveStateCode({ code }) || currentState;
+        renderCountyOptions(resolved, preferredFips || countySelect?.value || countyInput?.value || undefined, { stateChanged: true });
+        return resolved || null;
+      };
+      window.__T1_LOCALITY_DEBUG__ = dbg;
+      try { console.info('[t1-locality] init ok'); } catch (_e) {}
+    };
+
     window.addEventListener('t1:state', (event) => {
       const detail = event.detail || {};
-      const code = resolveStateCode({
+      let code = resolveStateCode({
         code: typeof detail === 'string' ? detail : detail?.code,
         fips: detail?.fips,
         stateFips: detail?.stateFips || detail?.geoSelection?.stateFips,
       });
+      if (!code) {
+        code = readActiveStateCode();
+      }
+      const stateChanged = code !== currentState;
       if (code) {
-        const stateChanged = code !== currentState;
         currentState = code;
         lastStateCode = code;
         renderCountyOptions(code, countySelect?.value, { stateChanged });
+      } else if (stateChanged) {
+        currentState = null;
+        renderCountyOptions(null, undefined, { stateChanged: true });
       }
       if (!currentState) {
         if (countyInput) countyInput.value = '';
@@ -334,6 +376,13 @@
         renderCountyOptions(stateCode, countyFips || undefined, { stateChanged: true });
       } else if (countyFips) {
         renderCountyOptions(currentState, countyFips || undefined, { preserveCounty: true });
+      } else if (detail.enabled === true && !currentState) {
+        const restored = readActiveStateCode() || lastStateCode || null;
+        if (restored) {
+          currentState = restored;
+          lastStateCode = restored;
+          renderCountyOptions(restored, undefined, { stateChanged: true });
+        }
       }
       if (countyInput && countyFips !== undefined) countyInput.value = countyFips || '';
       if (countySelect && countyFips) countySelect.value = countyFips;
@@ -375,6 +424,15 @@
         if (countyInput && countyFips) countyInput.value = countyFips;
       }
     }
+    if (!currentState) {
+      const derived = readActiveStateCode();
+      if (derived) {
+        currentState = derived;
+        lastStateCode = derived;
+        renderCountyOptions(derived, normalizeCountyFips(countyInput?.value || null) || undefined, { stateChanged: true });
+      }
+    }
     loadCountyDirectory();
+    attachDebug();
   })();
 </script>
