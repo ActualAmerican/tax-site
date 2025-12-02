@@ -1464,7 +1464,15 @@ async function loadPack() {
   // Map selects a new state
   window.addEventListener('t1:state', (e) => {
     if (slot !== 'solo') return;
-    updateState(e.detail || null);
+    const detail = e.detail || null;
+    updateState(selectFromController(detail));
+  });
+
+  // Controller-driven geo selection (state-level only)
+  window.addEventListener('t1:geo-selection', (e) => {
+    if (slot !== 'solo') return;
+    const detail = e.detail || {};
+    updateState(selectFromController(detail));
   });
 
   // Inputs changed — recompute current state (next frame)
@@ -1677,12 +1685,48 @@ async function loadPack() {
     requestAnimationFrame(() => initChartModal(_lastSummary));
   });
 
+  function resolveStateCode(input) {
+    const code = normalizeStateCode(input);
+    if (import.meta.env && import.meta.env.DEV) {
+      try {
+        console.debug('[Breakdown] resolveStateCode', { input, resolved: code });
+      } catch {}
+    }
+    return code;
+  }
+
+  function controllerSelection() {
+    try {
+      const ctrl = typeof window !== 'undefined' ? window.__T1_CONTROLLER__ : null;
+      if (ctrl && typeof ctrl.getGeoSelection === 'function') {
+        return ctrl.getGeoSelection() || null;
+      }
+    } catch {}
+    return null;
+  }
+
+  function selectFromController(detail) {
+    const ctrlSel = controllerSelection();
+    const resolvedFromController = resolveStateCode(ctrlSel);
+    if (resolvedFromController) return resolvedFromController;
+    const resolvedFromDetail = resolveStateCode(detail);
+    if (resolvedFromDetail) return resolvedFromDetail;
+    if (detail && detail.geoSelection) return detail;
+    return detail || null;
+  }
+
   // Initialize from URL (?fips=06 or ?state=CA), else use data-state
   try {
-    const url  = new URL(location.href);
-    const fips = url.searchParams.get('fips');
-    const st   = url.searchParams.get('state');
-    updateState(st || fips || initialCodeAttr || null);
+    const ctrlSel = slot === 'solo' ? controllerSelection() : null;
+    if (ctrlSel) {
+      const resolved = resolveStateCode(ctrlSel) ? resolveStateCode(ctrlSel) : { geoSelection: ctrlSel };
+      updateState(resolved);
+    } else {
+      const url  = new URL(location.href);
+      const fips = url.searchParams.get('fips');
+      const st   = url.searchParams.get('state');
+      updateState(st || fips || initialCodeAttr || null);
+    }
   } catch {
     updateState(initialCodeAttr || null);
   }

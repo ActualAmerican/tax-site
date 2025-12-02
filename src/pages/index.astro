@@ -118,47 +118,123 @@ const faqJson = JSON.stringify({
           return map;
         };
 
-        const clone = (obj) => JSON.parse(JSON.stringify(obj));
-
-        let geoSelection = { layer: 'state', stateFips: null, countyFips: null };
-        let localScope = {
-          enabled: true,
-          stateFips: null,
-          countyFips: null,
-          categories: DEFAULT_CATEGORIES.map((c) => c.id),
-          toggles: toToggleMap(DEFAULT_CATEGORIES),
+        const encodeMask = (state = {}) => {
+          let mask = 0;
+          DEFAULT_CATEGORIES.forEach((cat, idx) => {
+            if (state[cat.id]) mask |= 1 << idx;
+          });
+          return mask;
         };
 
-        const setGeoSelection = (patch = {}) => {
-          geoSelection = {
-            layer: patch.layer === 'county' ? 'county' : 'state',
-            stateFips: patch.stateFips ?? geoSelection.stateFips ?? null,
-            countyFips: patch.countyFips ?? (patch.layer === 'county' ? geoSelection.countyFips : null) ?? null,
+        const cloneGeoSelection = (src = geoSelection) => ({
+          layer: src && src.layer === 'county' ? 'county' : 'state',
+          stateFips: src && src.stateFips ? src.stateFips : null,
+          countyFips: src && src.countyFips ? src.countyFips : null,
+        });
+
+        const cloneLocalScope = (src = localScope) => ({
+          enabled: !!(src && src.enabled),
+          zip: src && src.zip ? src.zip : null,
+          city: src && src.city ? src.city : null,
+          stateFips: src && src.stateFips ? src.stateFips : null,
+          countyFips: src && src.countyFips ? src.countyFips : null,
+          categories: { ...(src && src.categories ? src.categories : {}) },
+          toggles: src && src.toggles != null ? src.toggles : 0,
+        });
+
+        const existingCtrl = window.__T1_CONTROLLER__ || null;
+        const existingHasAPI = existingCtrl && typeof existingCtrl.getGeoSelection === 'function' && typeof existingCtrl.getLocalScope === 'function';
+        if (existingHasAPI) {
+          console.log('[index stub] controller already present; stub disabled');
+          return;
+        }
+
+        const defaultCategories = toToggleMap(DEFAULT_CATEGORIES);
+        let geoSelection = existingCtrl && existingCtrl.geoSelection ? cloneGeoSelection(existingCtrl.geoSelection) : { layer: 'state', stateFips: null, countyFips: null };
+        let localScope = existingCtrl && existingCtrl.localScope ? cloneLocalScope(existingCtrl.localScope) : {
+          enabled: true,
+          zip: null,
+          city: null,
+          stateFips: null,
+          countyFips: null,
+          categories: { ...defaultCategories },
+          toggles: encodeMask(defaultCategories),
+        };
+
+        if (existingCtrl && !existingHasAPI) {
+          // Patch existing controller with missing API surface while preserving any existing state references.
+          existingCtrl.getGeoSelection = () => cloneGeoSelection(existingCtrl.geoSelection || geoSelection);
+          existingCtrl.getLocalScope = () => cloneLocalScope(existingCtrl.localScope || localScope);
+          if (typeof existingCtrl.setGeoSelection !== 'function') existingCtrl.setGeoSelection = (patch = {}) => {
+            geoSelection = { ...geoSelection, ...patch, layer: patch.layer === 'county' ? 'county' : 'state' };
+            if (patch.stateFips !== undefined) geoSelection.stateFips = patch.stateFips ? String(patch.stateFips).padStart(2, '0') : null;
+            if (patch.countyFips !== undefined) geoSelection.countyFips = patch.countyFips ? String(patch.countyFips) : null;
+            if (patch.stateFips !== undefined) geoSelection.countyFips = null;
+            existingCtrl.geoSelection = cloneGeoSelection(geoSelection);
+            return existingCtrl.getGeoSelection();
           };
-          if (geoSelection.stateFips) {
-            localScope.stateFips = geoSelection.stateFips;
+          if (typeof existingCtrl.setLocalScope !== 'function') existingCtrl.setLocalScope = (patch = {}) => {
+            localScope = { ...localScope, ...patch };
+            if (patch.stateFips !== undefined) {
+              localScope.stateFips = patch.stateFips ? String(patch.stateFips).padStart(2, '0') : null;
+              localScope.countyFips = null;
+            }
+            existingCtrl.localScope = cloneLocalScope(localScope);
+            return existingCtrl.getLocalScope();
+          };
+          window.__T1_CONTROLLER__ = existingCtrl;
+          console.log('[index stub] patched existing controller with geo/local API');
+          return;
+        }
+
+
+        const setGeoSelection = (patch = {}) => {
+          const nextLayer = patch.layer === 'county' ? 'county' : 'state';
+          let nextState = patch.stateFips ?? geoSelection.stateFips ?? null;
+          nextState = nextState != null ? String(nextState).padStart(2, '0') : null;
+          let nextCounty = patch.countyFips !== undefined ? patch.countyFips : geoSelection.countyFips;
+          nextCounty = nextCounty != null ? String(nextCounty) : nextCounty;
+          const stateChanged = nextState !== geoSelection.stateFips;
+          if (stateChanged) nextCounty = null;
+          geoSelection = { layer: nextLayer, stateFips: nextState, countyFips: nextCounty };
+          localScope = { ...localScope, stateFips: geoSelection.stateFips, countyFips: geoSelection.countyFips };
+          const snapshot = cloneGeoSelection();
+          try {
+            window.dispatchEvent(new CustomEvent('t1:geo-selection', { detail: { ...snapshot, geoSelection: { ...snapshot } } }));
+            window.dispatchEvent(new CustomEvent('t1:state', { detail: { ...snapshot, fips: snapshot.stateFips, geoSelection: { ...snapshot } } }));
+          } catch (err) {
+            console.warn('[index stub] emit failed', err);
           }
-          return clone(geoSelection);
+          return snapshot;
         };
 
         const setLocalScope = (patch = {}) => {
-          if (typeof patch.enabled === 'boolean') localScope.enabled = patch.enabled;
-          if (patch.stateFips !== undefined) localScope.stateFips = patch.stateFips || null;
-          if (patch.countyFips !== undefined) localScope.countyFips = patch.countyFips || null;
-          if (Array.isArray(patch.categories) && patch.categories.length) {
-            localScope.categories = [...new Set(patch.categories)];
+          const next = cloneLocalScope();
+          if (typeof patch.enabled === 'boolean') next.enabled = patch.enabled;
+          if (patch.zip !== undefined) next.zip = patch.zip || null;
+          if (patch.city !== undefined) next.city = patch.city || null;
+          if (patch.stateFips !== undefined) {
+            next.stateFips = patch.stateFips ? String(patch.stateFips).padStart(2, '0') : null;
+            next.countyFips = null;
           }
-          if (patch.toggles && typeof patch.toggles === 'object') {
-            localScope.toggles = { ...localScope.toggles, ...patch.toggles };
+          if (patch.countyFips !== undefined) next.countyFips = patch.countyFips ? String(patch.countyFips) : null;
+          if (patch.categories && typeof patch.categories === 'object') {
+            next.categories = { ...next.categories, ...patch.categories };
           }
-          if (!localScope.categories || !localScope.categories.length) {
-            localScope.categories = Object.keys(localScope.toggles);
+          if (patch.toggles != null) {
+            next.toggles = Number(patch.toggles) || 0;
+          } else {
+            next.toggles = encodeMask(next.categories);
           }
-          return getLocalScope();
+          localScope = next;
+          if (patch.stateFips !== undefined && geoSelection.stateFips !== next.stateFips) {
+            setGeoSelection({ stateFips: next.stateFips, countyFips: null, layer: 'state' });
+          }
+          return cloneLocalScope();
         };
 
-        const getGeoSelection = () => clone(geoSelection);
-        const getLocalScope = () => clone(localScope);
+        const getGeoSelection = () => cloneGeoSelection();
+        const getLocalScope = () => cloneLocalScope();
 
         const controller = {
           debug: 'stub-from-index',
@@ -179,6 +255,157 @@ const faqJson = JSON.stringify({
       } catch (err) {
         console.warn('[index stub] failed to attach controller stub', err);
       }
+    </script>
+    <script type="module">
+      // Final guard: ensure window.__T1_CONTROLLER__ exists with geo/local APIs
+      (() => {
+        const ensureString = (v) => (v == null ? null : String(v));
+        const normState = (v) => {
+          const s = ensureString(v);
+          return s && s.trim() ? s.padStart(2, '0').slice(0, 2) : null;
+        };
+        const cloneGeo = (src) => ({
+          layer: src && src.layer === 'county' ? 'county' : 'state',
+          stateFips: src && src.stateFips ? src.stateFips : null,
+          countyFips: src && src.countyFips ? src.countyFips : null,
+        });
+        const cloneLocal = (src) => ({
+          enabled: !!(src && src.enabled),
+          zip: src && src.zip ? src.zip : null,
+          city: src && src.city ? src.city : null,
+          stateFips: src && src.stateFips ? src.stateFips : null,
+          countyFips: src && src.countyFips ? src.countyFips : null,
+          categories: { ...(src && src.categories ? src.categories : {}) },
+          toggles: src && src.toggles != null ? src.toggles : 0,
+        });
+
+        const hasAPI = (ctrl) =>
+          ctrl &&
+          typeof ctrl.getGeoSelection === 'function' &&
+          typeof ctrl.getLocalScope === 'function' &&
+          typeof ctrl.setGeoSelection === 'function' &&
+          typeof ctrl.setLocalScope === 'function';
+
+        const installFallback = () => {
+          const DEFAULT_CATS = {
+            'local-income': true,
+            'local-sales': true,
+            lodging: false,
+            'car-rental': false,
+            'prepared-foods': false,
+            parking: false,
+          };
+          const encodeMask = (state = {}) =>
+            Object.keys(DEFAULT_CATS).reduce((mask, key, idx) => (state[key] ? mask | (1 << idx) : mask), 0);
+
+          let geo = { layer: 'state', stateFips: null, countyFips: null };
+          let local = {
+            enabled: true,
+            zip: null,
+            city: null,
+            stateFips: null,
+            countyFips: null,
+            categories: { ...DEFAULT_CATS },
+            toggles: encodeMask(DEFAULT_CATS),
+          };
+
+          const setGeoSelection = (patch = {}) => {
+            const nextLayer = patch.layer === 'county' ? 'county' : 'state';
+            const nextState = patch.stateFips !== undefined ? normState(patch.stateFips) : geo.stateFips;
+            let nextCounty =
+              patch.countyFips !== undefined ? ensureString(patch.countyFips) : geo.countyFips;
+            if (nextState !== geo.stateFips) nextCounty = null;
+            geo = { layer: nextLayer, stateFips: nextState, countyFips: nextCounty };
+            local = { ...local, stateFips: geo.stateFips, countyFips: geo.countyFips };
+            return cloneGeo(geo);
+          };
+
+          const setLocalScope = (patch = {}) => {
+            const next = cloneLocal(local);
+            if (typeof patch.enabled === 'boolean') next.enabled = patch.enabled;
+            if (patch.zip !== undefined) next.zip = patch.zip || null;
+            if (patch.city !== undefined) next.city = patch.city || null;
+            if (patch.stateFips !== undefined) {
+              next.stateFips = normState(patch.stateFips);
+              next.countyFips = null;
+            }
+            if (patch.countyFips !== undefined) next.countyFips = ensureString(patch.countyFips);
+            if (patch.categories && typeof patch.categories === 'object') {
+              next.categories = { ...next.categories, ...patch.categories };
+            }
+            if (patch.toggles != null) {
+              next.toggles = Number(patch.toggles) || 0;
+            } else {
+              next.toggles = encodeMask(next.categories);
+            }
+            local = next;
+            return cloneLocal(local);
+          };
+
+          const ctrl = {
+            getGeoSelection: () => cloneGeo(geo),
+            setGeoSelection,
+            getLocalScope: () => cloneLocal(local),
+            setLocalScope,
+            geoSelection: cloneGeo(geo),
+            localScope: cloneLocal(local),
+          };
+          window.__T1_CONTROLLER__ = ctrl;
+          window.addEventListener('t1:state', (e) => {
+            const detail = e.detail || {};
+            const fips = detail.stateFips || detail.fips || null;
+            setGeoSelection({ stateFips: fips, layer: 'state', countyFips: null });
+          });
+          return ctrl;
+        };
+
+        const maybePatch = () => {
+          const existing = window.__T1_CONTROLLER__ || null;
+          if (hasAPI(existing)) return existing;
+          if (existing && typeof existing === 'object') {
+            if (typeof existing.getGeoSelection !== 'function') existing.getGeoSelection = () => cloneGeo(existing.geoSelection || {});
+            if (typeof existing.getLocalScope !== 'function') existing.getLocalScope = () => cloneLocal(existing.localScope || {});
+            if (typeof existing.setGeoSelection !== 'function') existing.setGeoSelection = (patch = {}) => {
+              const next = existing.geoSelection || {};
+              existing.geoSelection = cloneGeo({
+                ...next,
+                layer: patch.layer === 'county' ? 'county' : 'state',
+                stateFips: patch.stateFips !== undefined ? normState(patch.stateFips) : next.stateFips || null,
+                countyFips:
+                  patch.countyFips !== undefined
+                    ? ensureString(patch.countyFips)
+                    : next.stateFips !== (patch.stateFips !== undefined ? normState(patch.stateFips) : next.stateFips)
+                      ? null
+                      : next.countyFips || null,
+              });
+              return existing.getGeoSelection();
+            };
+            if (typeof existing.setLocalScope !== 'function') existing.setLocalScope = (patch = {}) => {
+              const next = cloneLocal(existing.localScope || {});
+              if (typeof patch.enabled === 'boolean') next.enabled = patch.enabled;
+              if (patch.zip !== undefined) next.zip = patch.zip || null;
+              if (patch.city !== undefined) next.city = patch.city || null;
+              if (patch.stateFips !== undefined) {
+                next.stateFips = normState(patch.stateFips);
+                next.countyFips = null;
+              }
+              if (patch.countyFips !== undefined) next.countyFips = ensureString(patch.countyFips);
+              if (patch.categories && typeof patch.categories === 'object') {
+                next.categories = { ...next.categories, ...patch.categories };
+              }
+              existing.localScope = cloneLocal(next);
+              return existing.getLocalScope();
+            };
+            return (window.__T1_CONTROLLER__ = existing);
+          }
+          return installFallback();
+        };
+
+        maybePatch();
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', maybePatch, { once: true });
+        }
+      })();
     </script>
   </body>
 </html>

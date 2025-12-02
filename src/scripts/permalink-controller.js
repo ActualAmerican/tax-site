@@ -177,6 +177,22 @@ const normalizeCity = (value) => {
   return trimmed ? trimmed : null;
 };
 
+const cloneGeoSelection = (src = geoSelection) => ({
+  layer: src && src.layer === 'county' ? 'county' : 'state',
+  stateFips: src && src.stateFips ? src.stateFips : null,
+  countyFips: src && src.countyFips ? src.countyFips : null,
+});
+
+const cloneLocalScope = (src = localScope) => ({
+  enabled: !!(src && src.enabled),
+  zip: src && src.zip ? src.zip : null,
+  city: src && src.city ? src.city : null,
+  stateFips: src && src.stateFips ? src.stateFips : null,
+  countyFips: src && src.countyFips ? src.countyFips : null,
+  categories: { ...(src && src.categories ? src.categories : {}) },
+  toggles: src && src.toggles != null ? src.toggles : 0,
+});
+
 if (win) {
   const log = (...args) => {
     try {
@@ -251,15 +267,23 @@ if (win) {
       const code = String(patch.stateCode || '').toUpperCase();
       nextState = STATE_CODE_TO_FIPS[code] || null;
     }
-    const nextCounty =
+    let nextCounty =
       patch.countyFips === undefined ? geoSelection.countyFips : normalizeCountyFips(patch.countyFips);
+    const stateChanged = nextState !== geoSelection.stateFips;
+    if (stateChanged) {
+      nextCounty = null;
+    }
     const changed =
       nextLayer !== geoSelection.layer ||
-      nextState !== geoSelection.stateFips ||
+      stateChanged ||
       nextCounty !== geoSelection.countyFips;
     if (changed) {
       geoSelection = { layer: nextLayer, stateFips: nextState, countyFips: nextCounty };
-      if (controller) controller.geoSelection = { ...geoSelection };
+      localScope = { ...localScope, stateFips: nextState, countyFips: nextCounty };
+      if (controller) {
+        controller.geoSelection = cloneGeoSelection(geoSelection);
+        controller.localScope = cloneLocalScope(localScope);
+      }
     }
     return changed;
   };
@@ -281,6 +305,9 @@ if (win) {
       categories: hasCategories ? mergeCategories(localScope.categories, patch.categories) : localScope.categories,
       toggles: localScope.toggles,
     };
+    if (hasStateField && next.stateFips !== localScope.stateFips) {
+      next.countyFips = null;
+    }
     next.toggles = hasToggles
       ? Math.max(0, Number(patch.toggles) || 0)
       : encodeCategories(next.categories);
@@ -294,7 +321,10 @@ if (win) {
       next.categories !== localScope.categories;
     if (changed) {
       localScope = next;
-      if (controller) controller.localScope = { ...localScope };
+      if (controller) controller.localScope = cloneLocalScope(localScope);
+      if (hasStateField && geoSelection.stateFips !== next.stateFips) {
+        updateGeoSelectionState({ stateFips: next.stateFips, layer: next.stateFips ? 'state' : geoSelection.layer, countyFips: null });
+      }
     }
     return changed;
   };
@@ -438,7 +468,7 @@ if (win) {
   const controllerApi = {
     geoSelection: { ...geoSelection },
     localScope: { ...localScope },
-    getGeoSelection: () => ({ ...geoSelection }),
+    getGeoSelection: () => cloneGeoSelection(),
     setGeoSelection: (patch = {}, opts = {}) => {
       const changed = updateGeoSelectionState(patch);
       const sharePatch = {};
@@ -471,13 +501,13 @@ if (win) {
       if (changed && opts.emit !== false) {
         emitGeoSelection(opts.origin || 'controller');
       }
-      return { ...geoSelection };
+      return cloneGeoSelection();
     },
-    getLocalScope: () => ({ ...localScope }),
+    getLocalScope: () => cloneLocalScope(),
     getScopeProfile: () => ({ ...scopeProfile, local: { categories: [...scopeProfile.local.categories] } }),
     setLocalScope: (patch = {}, opts = {}) => {
       const changed = updateLocalScopeState(patch);
-      if (!changed) return { ...localScope };
+      if (!changed) return cloneLocalScope();
       const sharePatch = {};
       const localPatch = {};
       if (Object.prototype.hasOwnProperty.call(patch, 'zip')) {
@@ -507,7 +537,7 @@ if (win) {
       if (opts.emit !== false) {
         emitLocalScope(opts.origin || 'controller');
       }
-      return { ...localScope };
+      return cloneLocalScope();
     },
   };
 
