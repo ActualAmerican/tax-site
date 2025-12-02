@@ -51,7 +51,7 @@
     const root = script.previousElementSibling;
     if (!root || !root.matches('.locality-picker')) return;
 
-    const COUNTY_DIRECTORY = {
+    const FALLBACK_COUNTY_DIRECTORY = {
       CA: [
         { fips: '06037', name: 'Los Angeles County' },
         { fips: '06073', name: 'San Diego County' },
@@ -99,11 +99,87 @@
     const STATE_CODE_TO_FIPS = Object.fromEntries(Object.entries(STATE_FIPS_MAP).map(([f, code]) => [code, f]));
 
     let currentState = null;
+    let countyDirectory = { ...FALLBACK_COUNTY_DIRECTORY };
+    let loadingCounties = false;
+    let lastStateCode = null;
 
     const countySelect = root.querySelector('[data-field="county-select"]');
     const countyInput = root.querySelector('[data-field="county"]');
     const zipInput = root.querySelector('[data-field="zip"]');
     const cityInput = root.querySelector('[data-field="city"]');
+
+    const normalizeCountyFips = (value) => {
+      if (value == null) return null;
+      const digits = String(value).trim().replace(/\D+/g, '');
+      if (!digits) return null;
+      if (digits.length >= 5) return digits.slice(0, 5);
+      return digits.padStart(5, '0');
+    };
+
+    const normalizeStateFips = (value) => {
+      if (value == null) return null;
+      const digits = String(value).trim().replace(/\D+/g, '');
+      if (!digits) return null;
+      return digits.padStart(2, '0').slice(0, 2);
+    };
+
+    const normalizeStateCode = (value) => {
+      if (!value) return null;
+      const trimmed = String(value).trim().toUpperCase();
+      return trimmed || null;
+    };
+
+    const resolveStateCode = ({ code, stateFips, fips }) => {
+      if (code) {
+        const norm = String(code).trim().toUpperCase();
+        return norm || null;
+      }
+      const digits = stateFips || fips;
+      if (digits) {
+        const normalized = normalizeStateFips(digits);
+        return normalized ? STATE_FIPS_MAP[normalized] || null : null;
+      }
+      return null;
+    };
+
+    const loadCountyDirectory = async () => {
+      const win = typeof window !== 'undefined' ? window : undefined;
+      if (!win || loadingCounties) return countyDirectory;
+      loadingCounties = true;
+      try {
+        const pack = win.__T1_PACK__ || win.__t1_pack || null;
+        const href = pack?.registry?.layers?.counties?.href || null;
+        if (!href) return countyDirectory;
+        const res = await fetch(href);
+        if (!res.ok) throw new Error(`fetch counties failed: ${res.status}`);
+        const data = await res.json();
+        const features = Array.isArray(data?.features) ? data.features : [];
+        const nextDirectory = {};
+        features.forEach((feature) => {
+          const props = feature?.properties || {};
+          const state = normalizeStateCode(props.state);
+          const fips = normalizeCountyFips(props.fips);
+          const name = props.name || null;
+          if (!state || !fips || !name) return;
+          if (!nextDirectory[state]) nextDirectory[state] = [];
+          nextDirectory[state].push({ fips, name: String(name) });
+        });
+        Object.keys(nextDirectory).forEach((key) => {
+          nextDirectory[key].sort((a, b) => a.name.localeCompare(b.name, 'en-US'));
+        });
+        if (Object.keys(nextDirectory).length) {
+          countyDirectory = nextDirectory;
+        }
+      } catch (err) {
+        try {
+          console.warn('locality-picker: county directory load failed, using fallback', err);
+        } catch (_e) {}
+      } finally {
+        loadingCounties = false;
+        renderCountyOptions(currentState, normalizeCountyFips(countyInput?.value || null), { preserveCounty: true });
+      }
+      return countyDirectory;
+    };
 
     const emit = () => {
       const zip = (root.querySelector('[data-field="zip"]')?.value || '').trim();
@@ -119,7 +195,7 @@
       }
       const countyName =
         derivedState && county
-          ? (COUNTY_DIRECTORY[derivedState] || []).find((c) => c.fips === county)?.name
+          ? (countyDirectory[derivedState] || []).find((c) => c.fips === county)?.name
           : undefined;
 
       const stateFips = derivedState ? STATE_CODE_TO_FIPS[derivedState] : county ? county.slice(0, 2) : undefined;
@@ -153,23 +229,29 @@
       });
     }
 
-    function renderCountyOptions(code, preferredFips) {
+    function renderCountyOptions(code, preferredFips, opts = {}) {
       if (!countySelect) return;
-      const list = (code && COUNTY_DIRECTORY[code]) || [];
+      const list = (code && countyDirectory[code]) || [];
+      const normalizedPreferred = normalizeCountyFips(preferredFips);
+      const stateChanged = opts.stateChanged === true;
       countySelect.innerHTML = '';
       const placeholder = document.createElement('option');
       placeholder.value = '';
-      placeholder.textContent = list.length ? 'Select a county (optional)' : 'County data coming soon';
+      placeholder.textContent = loadingCounties
+        ? 'Loading counties...'
+        : list.length
+          ? 'Select a county (optional)'
+          : code
+            ? 'No county data yet'
+            : 'Select a state to load counties';
       placeholder.selected = true;
-      placeholder.disabled = list.length === 0;
+      placeholder.disabled = loadingCounties || list.length === 0;
       countySelect.appendChild(placeholder);
 
       if (!list.length) {
         countySelect.setAttribute('disabled', '');
-        if (countyInput) {
-          countyInput.value = '';
-        }
-        emit();
+        if (countyInput) countyInput.value = '';
+        if (stateChanged) emit();
         return;
       }
 
@@ -180,8 +262,12 @@
         countySelect.appendChild(opt);
       });
       countySelect.removeAttribute('disabled');
-      if (preferredFips) {
-        countySelect.value = preferredFips;
+      if (normalizedPreferred && list.some((item) => item.fips === normalizedPreferred)) {
+        countySelect.value = normalizedPreferred;
+        if (countyInput) countyInput.value = normalizedPreferred;
+      } else if (stateChanged) {
+        countySelect.value = '';
+        if (countyInput) countyInput.value = '';
       }
     }
 
@@ -195,44 +281,100 @@
     }
 
     window.addEventListener('t1:state', (event) => {
-      const detail = event.detail;
-      let code = null;
-      if (detail) {
-        if (typeof detail === 'string') {
-          code = detail.toUpperCase();
-        } else if (detail.code) {
-          code = String(detail.code).toUpperCase();
-        } else if (detail.fips) {
-          const dig = String(detail.fips).slice(0, 2);
-          code = STATE_FIPS_MAP[dig] || null;
-        }
+      const detail = event.detail || {};
+      const code = resolveStateCode({
+        code: typeof detail === 'string' ? detail : detail?.code,
+        fips: detail?.fips,
+        stateFips: detail?.stateFips || detail?.geoSelection?.stateFips,
+      });
+      if (code) {
+        const stateChanged = code !== currentState;
+        currentState = code;
+        lastStateCode = code;
+        renderCountyOptions(code, countySelect?.value, { stateChanged });
       }
-      currentState = code;
-      renderCountyOptions(code, countySelect?.value);
-      if (!code) {
+      if (!currentState) {
         if (countyInput) countyInput.value = '';
         if (zipInput) zipInput.value = '';
         if (cityInput) cityInput.value = '';
       }
-      emit();
+    });
+
+    window.addEventListener('t1:geo-selection', (event) => {
+      const detail = event.detail || {};
+      const layer = detail?.layer || detail?.geoSelection?.layer || 'state';
+      if (layer !== 'state' && layer !== 'county') return;
+      const code = resolveStateCode({
+        stateFips: detail.stateFips,
+        fips: detail.fips,
+        code: detail.code,
+      });
+      const countyFips = normalizeCountyFips(detail.countyFips);
+      if (code) {
+        const stateChanged = code !== currentState;
+        currentState = code;
+        lastStateCode = code;
+        renderCountyOptions(code, countyFips || countySelect?.value, { stateChanged });
+        if (countyInput && countyFips) countyInput.value = countyFips;
+        if (stateChanged && !countyFips && countyInput) countyInput.value = '';
+      }
+    });
+
+    window.addEventListener('t1:local-scope', (event) => {
+      const detail = event.detail || {};
+      const countyFips = normalizeCountyFips(detail.countyFips);
+      const stateCode = resolveStateCode({
+        stateFips: detail.stateFips,
+        fips: detail.fips,
+        code: detail.code,
+      });
+      if (stateCode && stateCode !== currentState) {
+        currentState = stateCode;
+        lastStateCode = stateCode;
+        renderCountyOptions(stateCode, countyFips || undefined, { stateChanged: true });
+      } else if (countyFips) {
+        renderCountyOptions(currentState, countyFips || undefined, { preserveCounty: true });
+      }
+      if (countyInput && countyFips !== undefined) countyInput.value = countyFips || '';
+      if (countySelect && countyFips) countySelect.value = countyFips;
+      if (zipInput && typeof detail.zip === 'string') zipInput.value = detail.zip;
+      if (cityInput && typeof detail.city === 'string') cityInput.value = detail.city;
     });
 
     window.addEventListener('t1:locality-changed', (event) => {
       const detail = event.detail || {};
       if (detail && detail.source === 'picker') return;
-      const countyFips = detail?.fipsCounty || detail?.countyFips || detail?.fips || '';
-      let stateCode = detail?.state || null;
-      if (!stateCode && countyFips) {
-        stateCode = STATE_FIPS_MAP[String(countyFips).slice(0, 2)] || null;
-      }
-      if (stateCode && stateCode !== currentState) {
-        currentState = stateCode;
-        renderCountyOptions(stateCode, countyFips || undefined);
-      }
-      if (countyInput && typeof countyFips === 'string') countyInput.value = countyFips;
-      if (countySelect && countyFips) countySelect.value = countyFips;
+      const countyFipsRaw = detail?.fipsCounty || detail?.countyFips || detail?.fips || null;
+      const countyFips = normalizeCountyFips(countyFipsRaw);
+      if (countyInput && countyFips !== null) countyInput.value = countyFips;
       if (zipInput && typeof detail.zip === 'string') zipInput.value = detail.zip;
       if (cityInput && typeof detail.city === 'string') cityInput.value = detail.city;
     });
+
+    const controller = typeof window !== 'undefined' ? window.__T1_CONTROLLER__ || null : null;
+    const initialScope =
+      (controller && typeof controller.getLocalScope === 'function' && controller.getLocalScope()) ||
+      (controller && typeof controller._getLocalScope === 'function' && controller._getLocalScope()) ||
+      controller?.localScope ||
+      null;
+    const initialGeo =
+      (controller && typeof controller.getGeoSelection === 'function' && controller.getGeoSelection()) ||
+      (controller && typeof controller._getGeoSelection === 'function' && controller._getGeoSelection()) ||
+      controller?.geoSelection ||
+      null;
+    if (initialScope?.zip && zipInput) zipInput.value = initialScope.zip;
+    if (initialScope?.city && cityInput) cityInput.value = initialScope.city;
+    if (initialGeo || initialScope) {
+      const stateFips = normalizeStateFips(initialGeo?.stateFips || initialScope?.stateFips);
+      const countyFips = normalizeCountyFips(initialGeo?.countyFips || initialScope?.countyFips);
+      const stateCode = stateFips ? STATE_FIPS_MAP[stateFips] || null : null;
+      if (stateCode) {
+        currentState = stateCode;
+        lastStateCode = stateCode;
+        renderCountyOptions(stateCode, countyFips || undefined, { stateChanged: true });
+        if (countyInput && countyFips) countyInput.value = countyFips;
+      }
+    }
+    loadCountyDirectory();
   })();
 </script>

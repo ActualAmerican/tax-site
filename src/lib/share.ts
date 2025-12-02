@@ -184,8 +184,8 @@ const DEFAULT_INPUTS: ShareInputs = {
 
 const DEFAULT_SCOPE: ShareScope = {
   local: false,
-  state: true,
-  federal: true,
+  state: false,
+  federal: false,
 };
 
 const DEFAULT_LOCAL: ShareLocal = {
